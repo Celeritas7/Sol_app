@@ -699,10 +699,10 @@
 // ==================================================
 // SUPABASE CONFIGURATION
 // ==================================================
-const SUPABASE_URL = 'https://gshxdikyngzhmwpeysvj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzaHhkaWt5bmd6aG13cGV5c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMjY2NTEsImV4cCI6MjA4MzgwMjY1MX0.VGd7PS7Bs154nNJZ0nvFRfwZ0bBv9Vw8IkHLFk9_Ojs';
+const SUPABASE_URL = 'https://wylxvmkcrexwfpjpbhyy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHh2bWtjcmV4d2ZwanBiaHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MzkxMDYsImV4cCI6MjA4NDIxNTEwNn0.6Bxo42hx4jwlJGWnfjiTpiDUsYfc1QLTN3YtrU1efak';
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ==================================================
 // GLOBAL STATE
@@ -1043,7 +1043,7 @@ async function saveTask() {
       if (error) throw error;
       
       // Delete existing tag relationships
-      await supabaseClient.from('task_tags').delete().eq('task_id', taskId);
+      await supabase.from('task_tags').delete().eq('task_id', taskId);
     } else {
       // Insert new task
       const { data, error } = await supabase
@@ -1063,7 +1063,7 @@ async function saveTask() {
         tag_id: tagId
       }));
       
-      const { error } = await supabaseClient.from('task_tags').insert(taskTags);
+      const { error } = await supabase.from('task_tags').insert(taskTags);
       if (error) throw error;
     }
     
@@ -1082,7 +1082,7 @@ function deleteTask(taskId) {
   
   deleteCallback = async () => {
     try {
-      const { error } = await supabaseClient.from('tasks').delete().eq('id', taskId);
+      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) throw error;
       
       showToast('Task deleted!', 'success');
@@ -1169,7 +1169,7 @@ function deleteTag(tagId) {
   
   deleteCallback = async () => {
     try {
-      const { error } = await supabaseClient.from('tags').delete().eq('id', tagId);
+      const { error } = await supabase.from('tags').delete().eq('id', tagId);
       if (error) throw error;
       
       showToast('Tag deleted!', 'success');
