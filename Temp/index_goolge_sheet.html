@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Finder Chatbot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+      max-height: 700px;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .chat-header h1 {
+      font-size: 1.5rem;
+      margin-bottom: 5px;
+    }
+
+    .chat-header p {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background: #f8f9fa;
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      line-height: 1.4;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .bot-message {
+      background: white;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .user-message {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .options-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .option-btn {
+      padding: 10px 18px;
+      border: 2px solid #667eea;
+      background: white;
+      color: #667eea;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .option-btn:hover {
+      background: #667eea;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .option-btn:active {
+      transform: scale(0.98);
+    }
+
+    .task-card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-left: 4px solid #667eea;
+    }
+
+    .task-card h3 {
+      color: #333;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .task-card .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .task-tag {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .tag-category {
+      background: #e8f4fd;
+      color: #1976d2;
+    }
+
+    .tag-mood {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .tag-location {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+
+    .tag-status {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .status-done {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status-in_progress {
+      background: #fff8e1;
+      color: #f9a825;
+    }
+
+    .status-not_started {
+      background: #eceff1;
+      color: #546e7a;
+    }
+
+    .status-blocked {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .chat-footer {
+      padding: 15px 20px;
+      background: white;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 10px;
+    }
+
+    .restart-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .restart-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #666;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .loading-dots span {
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    .no-tasks {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .no-tasks-icon {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    .filter-summary {
+      background: #f0f4ff;
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .filter-summary strong {
+      color: #667eea;
+    }
+  </style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="chat-header">
+    <h1>🎯 Task Finder</h1>
+    <p>Let me help you find the right task</p>
+  </div>
+
+  <div class="chat-messages" id="chatMessages">
+    <!-- Messages will be inserted here -->
+  </div>
+
+  <div class="chat-footer">
+    <button class="restart-btn" onclick="restartChat()">🔄 Start Over</button>
+  </div>
+</div>
+
+<script>
+// ==================================================
+// CONFIGURATION
+// ==================================================
+const GOOGLE_SHEET_ID = "1KBNZIgQOdvzCbEV9dsNdbbBvaIotchFNWueSezF_hFA";
+const SHEET_GID = "0";
+
+function getSheetUrl() {
+  return `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
+}
+
+// Mood hierarchy (index = energy level, higher = less energy)
+const MOOD_HIERARCHY = ['Energetic', 'Bit tired', 'Tired', 'Sleepy'];
+
+// ==================================================
+// GLOBAL STATE
+// ==================================================
+let allTasks = [];
+let allCategories = new Set();
+let allLocations = new Set();
+let currentStep = 0;
+let userSelections = {
+  mood: null,
+  location: null,
+  category: null
+};
+
+// ==================================================
+// CSV PARSING
+// ==================================================
+function parseCSV(csvText) {
+  const lines = csvText.split('\n').map(line => line.trim()).filter(line => line);
+  if (lines.length === 0) return [];
+  
+  const headers = parseCSVLine(lines[0]);
+  const data = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    if (values.length === 0) continue;
+    
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header.trim()] = (values[index] || '').trim();
+    });
+    
+    if (!row.Child) continue;
+    
+    data.push(row);
+  }
+  
+  return data;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  
+  return result;
+}
+
+// ==================================================
+// DATA PROCESSING
+// ==================================================
+function processData(csvData) {
+  allTasks = [];
+  allCategories = new Set();
+  allLocations = new Set();
+  
+  csvData.forEach(row => {
+    const task = {
+      name: row.Child || '',
+      parent: row.Parent || '',
+      category: row.Category || '',
+      status: row.Status || '',
+      notes: row.Notes || '',
+      mood: row.Mood || '',
+      locations: row.Locations || ''
+    };
+    
+    // Only add leaf tasks (tasks that have actual content)
+    if (task.name && task.parent && task.parent.toUpperCase() !== 'ROOT') {
+      allTasks.push(task);
+    }
+    
+    // Collect categories
+    if (row.Category) {
+      row.Category.split(',').forEach(cat => {
+        const trimmed = cat.trim();
+        if (trimmed) allCategories.add(trimmed);
+      });
+    }
+    
+    // Collect locations
+    if (row.Locations) {
+      row.Locations.split(',').forEach(loc => {
+        const trimmed = loc.trim();
+        if (trimmed) allLocations.add(trimmed);
+      });
+    }
+  });
+}
+
+// ==================================================
+// FILTERING LOGIC
+// ==================================================
+function filterTasks(tasks, mood, location, category) {
+  return tasks.filter(task => {
+    // Mood filter (hierarchical)
+    if (mood) {
+      const filterMoodIndex = MOOD_HIERARCHY.indexOf(mood);
+      const taskMoodIndex = MOOD_HIERARCHY.indexOf(task.mood);
+      
+      // If task has no mood, include it (can do anytime)
+      // If task has mood, only include if task requires same or less energy
+      if (task.mood && taskMoodIndex !== -1 && filterMoodIndex !== -1) {
+        if (taskMoodIndex > filterMoodIndex) return false;
+      }
+    }
+    
+    // Location filter
+    if (location) {
+      if (!task.locations) return false;
+      const taskLocations = task.locations.split(',').map(l => l.trim().toLowerCase());
+      if (!taskLocations.includes(location.toLowerCase())) return false;
+    }
+    
+    // Category filter
+    if (category) {
+      if (!task.category) return false;
+      const taskCategories = task.category.split(',').map(c => c.trim().toLowerCase());
+      const filterLower = category.toLowerCase();
+      if (!taskCategories.some(c => c.includes(filterLower) || filterLower.includes(c))) return false;
+    }
+    
+    return true;
+  });
+}
+
+// ==================================================
+// CHAT UI
+// ==================================================
+const chatMessages = document.getElementById('chatMessages');
+
+function addMessage(content, isBot = true, isHTML = false) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${isBot ? 'bot-message' : 'user-message'}`;
+  
+  if (isHTML) {
+    messageDiv.innerHTML = content;
+  } else {
+    messageDiv.textContent = content;
+  }
+  
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  return messageDiv;
+}
+
+function addOptions(options, callback) {
+  const container = document.createElement('div');
+  container.className = 'options-container';
+  
+  options.forEach(option => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = option.label;
+    btn.onclick = () => {
+      // Add user's selection as a message
+      addMessage(option.label, false);
+      // Remove options
+      container.remove();
+      // Callback
+      callback(option.value);
+    };
+    container.appendChild(btn);
+  });
+  
+  chatMessages.appendChild(container);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addLoadingMessage() {
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'message bot-message loading';
+  loadingDiv.id = 'loadingMessage';
+  loadingDiv.innerHTML = `
+    <div class="loading-dots">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+  chatMessages.appendChild(loadingDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeLoadingMessage() {
+  const loading = document.getElementById('loadingMessage');
+  if (loading) loading.remove();
+}
+
+function showTaskCards(tasks) {
+  if (tasks.length === 0) {
+    addMessage(`
+      <div class="no-tasks">
+        <div class="no-tasks-icon">😕</div>
+        <p>No tasks match your criteria.</p>
+        <p>Try different filters!</p>
+      </div>
+    `, true, true);
+    return;
+  }
+  
+  // Show filter summary
+  const summaryParts = [];
+  if (userSelections.mood) summaryParts.push(`<strong>Mood:</strong> ${userSelections.mood}`);
+  if (userSelections.location) summaryParts.push(`<strong>Location:</strong> ${userSelections.location}`);
+  if (userSelections.category) summaryParts.push(`<strong>Category:</strong> ${userSelections.category}`);
+  
+  let html = `Found <strong>${tasks.length}</strong> task${tasks.length > 1 ? 's' : ''} for you!`;
+  
+  if (summaryParts.length > 0) {
+    html += `<div class="filter-summary">${summaryParts.join(' • ')}</div>`;
+  }
+  
+  addMessage(html, true, true);
+  
+  // Show task cards (limit to 5)
+  const displayTasks = tasks.slice(0, 5);
+  
+  displayTasks.forEach(task => {
+    const statusClass = task.status ? `status-${task.status.toLowerCase().replace(/\s+/g, '_')}` : '';
+    
+    let metaHTML = '';
+    if (task.category) metaHTML += `<span class="task-tag tag-category">${task.category}</span>`;
+    if (task.mood) metaHTML += `<span class="task-tag tag-mood">${task.mood}</span>`;
+    if (task.locations) metaHTML += `<span class="task-tag tag-location">📍 ${task.locations}</span>`;
+    if (task.status) metaHTML += `<span class="tag-status ${statusClass}">${task.status}</span>`;
+    
+    const cardHTML = `
+      <div class="task-card">
+        <h3>${task.name}</h3>
+        ${task.parent ? `<p style="color: #888; font-size: 0.85rem; margin-bottom: 8px;">📁 ${task.parent}</p>` : ''}
+        <div class="task-meta">${metaHTML}</div>
+        ${task.notes ? `<p style="margin-top: 8px; font-size: 0.85rem; color: #666;">${task.notes}</p>` : ''}
+      </div>
+    `;
+    addMessage(cardHTML, true, true);
+  });
+  
+  if (tasks.length > 5) {
+    addMessage(`... and ${tasks.length - 5} more tasks match your criteria.`, true);
+  }
+}
+
+// ==================================================
+// CONVERSATION FLOW
+// ==================================================
+const conversationSteps = [
+  {
+    question: "Hi! 👋 How are you feeling right now?",
+    getOptions: () => [
+      { label: '⚡ Energetic', value: 'Energetic' },
+      { label: '😊 Bit tired', value: 'Bit tired' },
+      { label: '😐 Tired', value: 'Tired' },
+      { label: '😴 Sleepy', value: 'Sleepy' },
+      { label: '🔄 Any mood', value: null }
+    ],
+    onSelect: (value) => { userSelections.mood = value; }
+  },
+  {
+    question: "Where are you right now? 📍",
+    getOptions: () => {
+      const options = Array.from(allLocations).sort().map(loc => ({
+        label: getLocationEmoji(loc) + ' ' + capitalizeFirst(loc),
+        value: loc
+      }));
+      options.push({ label: '🌍 Anywhere', value: null });
+      return options;
+    },
+    onSelect: (value) => { userSelections.location = value; }
+  },
+  {
+    question: "What would you like to work on? 📚",
+    getOptions: () => {
+      const options = Array.from(allCategories).sort().map(cat => ({
+        label: cat,
+        value: cat
+      }));
+      options.push({ label: '🎯 Anything', value: null });
+      return options;
+    },
+    onSelect: (value) => { userSelections.category = value; }
+  }
+];
+
+function getLocationEmoji(location) {
+  const emojis = {
+    'train': '🚃',
+    'room': '🏠',
+    'road': '🚶',
+    'company': '🏢',
+    'park': '🌳',
+    'share_house': '🏘️',
+    'cafe': '☕',
+    'mood': '🧠'
+  };
+  return emojis[location.toLowerCase()] || '📍';
+}
+
+function capitalizeFirst(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function runConversationStep() {
+  if (currentStep >= conversationSteps.length) {
+    // All questions answered - show results
+    showResults();
+    return;
+  }
+  
+  const step = conversationSteps[currentStep];
+  
+  setTimeout(() => {
+    addMessage(step.question);
+    
+    setTimeout(() => {
+      addOptions(step.getOptions(), (value) => {
+        step.onSelect(value);
+        currentStep++;
+        runConversationStep();
+      });
+    }, 300);
+  }, 500);
+}
+
+function showResults() {
+  addLoadingMessage();
+  
+  setTimeout(() => {
+    removeLoadingMessage();
+    
+    const filteredTasks = filterTasks(
+      allTasks,
+      userSelections.mood,
+      userSelections.location,
+      userSelections.category
+    );
+    
+    showTaskCards(filteredTasks);
+    
+    // Ask if they want to filter more
+    setTimeout(() => {
+      addMessage("Would you like to search again with different criteria?");
+      addOptions([
+        { label: '🔄 Yes, start over', value: 'restart' },
+        { label: '✅ No, I\'m good', value: 'done' }
+      ], (value) => {
+        if (value === 'restart') {
+          restartChat();
+        } else {
+          addMessage("Great! Good luck with your tasks! 💪");
+        }
+      });
+    }, 500);
+  }, 800);
+}
+
+// ==================================================
+// INITIALIZATION
+// ==================================================
+async function loadData() {
+  addLoadingMessage();
+  
+  try {
+    const response = await fetch(getSheetUrl());
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    const csvText = await response.text();
+    const csvData = parseCSV(csvText);
+    processData(csvData);
+    
+    removeLoadingMessage();
+    
+    // Start conversation
+    runConversationStep();
+    
+  } catch (error) {
+    removeLoadingMessage();
+    console.error('Error loading data:', error);
+    addMessage(`❌ Could not load tasks. Make sure your Google Sheet is published to web.
+
+Go to: File → Share → Publish to web → Select CSV format → Publish`, true);
+  }
+}
+
+function restartChat() {
+  // Reset state
+  currentStep = 0;
+  userSelections = {
+    mood: null,
+    location: null,
+    category: null
+  };
+  
+  // Clear messages
+  chatMessages.innerHTML = '';
+  
+  // Start fresh
+  addMessage("Let's find you a task! 🎯");
+  runConversationStep();
+}
+
+// Start the app
+loadData();
+</script>
+
+</body>
+</html>
