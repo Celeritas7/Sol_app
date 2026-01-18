@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Finder</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      background: white;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .nav-tab {
+      padding: 15px 30px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover {
+      color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .nav-tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      font-weight: 600;
+    }
+
+    /* Main Content */
+    .main-content {
+      padding: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    /* Filter Section */
+    .filter-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .filter-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: white;
+    }
+
+    /* Tasks Grid */
+    .tasks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .task-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid #667eea;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .task-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+
+    .task-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .task-card .task-notes {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .task-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .task-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #667eea;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+
+    .task-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-not_started { background: #eceff1; color: #546e7a; }
+    .status-in_progress { background: #fff8e1; color: #f9a825; }
+    .status-done { background: #e8f5e9; color: #2e7d32; }
+    .status-blocked { background: #ffebee; color: #c62828; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: 1.3rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .modal-close:hover {
+      color: #333;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* Tag Selector */
+    .tag-selector {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .tag-selector-group {
+      margin-bottom: 10px;
+    }
+
+    .tag-selector-group-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #888;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .tag-selector-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag-option {
+      padding: 6px 12px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tag-option:hover {
+      transform: scale(1.05);
+    }
+
+    .tag-option.selected {
+      border-color: #333;
+    }
+
+    /* Tags Management */
+    .tags-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .tags-table th,
+    .tags-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    .tags-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .tags-table tr:hover {
+      background: #f8f9ff;
+    }
+
+    .color-preview {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 15px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      background: #333;
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .nav-tabs {
+        overflow-x: auto;
+      }
+
+      .nav-tab {
+        padding: 12px 20px;
+        white-space: nowrap;
+      }
+
+      .main-content {
+        padding: 15px;
+      }
+
+      .filter-section {
+        flex-direction: column;
+      }
+
+      .tasks-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>🎯 Task Finder</h1>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openTaskModal()">+ New Task</button>
+  </div>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('tasks')">📋 Tasks</button>
+  <button class="nav-tab" onclick="switchTab('tags')">🏷️ Manage Tags</button>
+  <button class="nav-tab" onclick="switchTab('chatbot')">💬 Chatbot</button>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+  <!-- Tasks Tab -->
+  <div id="tasks-tab" class="tab-content active">
+    <!-- Filters -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🔍 Filter Tasks</span>
+        <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Clear Filters</button>
+      </div>
+      <div class="filter-section" id="filterSection">
+        <!-- Filters will be populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Tasks Grid -->
+    <div id="tasksContainer">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <p>Loading tasks...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tags Tab -->
+  <div id="tags-tab" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🏷️ Manage Tags</span>
+        <button class="btn btn-primary btn-sm" onclick="openTagModal()">+ New Tag</button>
+      </div>
+      <div id="tagsContainer">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Loading tags...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chatbot Tab -->
+  <div id="chatbot-tab" class="tab-content">
+    <div class="card" style="max-width: 500px; margin: 0 auto;">
+      <div id="chatContainer" style="min-height: 400px;">
+        <!-- Chatbot content -->
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Task Modal -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="taskModalTitle">New Task</h2>
+      <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="taskId">
+      
+      <div class="form-group">
+        <label>Task Name *</label>
+        <input type="text" id="taskName" placeholder="Enter task name">
+      </div>
+      
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="taskNotes" placeholder="Additional notes..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Status</label>
+        <select id="taskStatus">
+          <option value="not_started">Not Started</option>
+          <option value="in_progress">In Progress</option>
+          <option value="done">Done</option>
+          <option value="blocked">Blocked</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Link (URL or file path)</label>
+        <input type="text" id="taskLink" placeholder="https://... or C:\path\to\file">
+      </div>
+      
+      <div class="form-group">
+        <label>Tags</label>
+        <div class="tag-selector" id="tagSelector">
+          <!-- Tags will be populated dynamically -->
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tag Modal -->
+<div class="modal-overlay" id="tagModal">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2 id="tagModalTitle">New Tag</h2>
+      <button class="modal-close" onclick="closeTagModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tagId">
+      
+      <div class="form-group">
+        <label>Tag Name *</label>
+        <input type="text" id="tagName" placeholder="Enter tag name">
+      </div>
+      
+      <div class="form-group">
+        <label>Tag Type *</label>
+        <select id="tagType">
+          <option value="subject">Subject</option>
+          <option value="category">Category</option>
+          <option value="mood">Mood</option>
+          <option value="location">Location</option>
+          <option value="duration">Duration</option>
+          <option value="priority">Priority</option>
+          <option value="project">Project</option>
+          <option value="tool">Tool</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Color</label>
+        <input type="color" id="tagColor" value="#667eea" style="width: 100%; height: 45px; cursor: pointer;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeTagModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTag()">Save Tag</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2>Confirm Delete</h2>
+      <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteMessage">Are you sure you want to delete this item?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================================================
+// SUPABASE CONFIGURATION
+// ==================================================
+const SUPABASE_URL = 'https://gshxdikyngzhmwpeysvj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzaHhkaWt5bmd6aG13cGV5c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMjY2NTEsImV4cCI6MjA4MzgwMjY1MX0.VGd7PS7Bs154nNJZ0nvFRfwZ0bBv9Vw8IkHLFk9_Ojs';
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ==================================================
+// GLOBAL STATE
+// ==================================================
+let allTasks = [];
+let allTags = [];
+let selectedTagIds = new Set();
+let currentFilters = {};
+let deleteCallback = null;
+
+// Mood hierarchy for filtering
+const MOOD_HIERARCHY = ['Energetic', 'Bit tired', 'Tired', 'Sleepy'];
+
+// ==================================================
+// INITIALIZATION
+// ==================================================
+async function init() {
+  await loadTags();
+  await loadTasks();
+  renderFilters();
+  renderTagSelector();
+  renderTagsTable();
+  initChatbot();
+}
+
+// ==================================================
+// DATA LOADING
+// ==================================================
+async function loadTags() {
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('type')
+      .order('name');
+    
+    if (error) throw error;
+    allTags = data || [];
+  } catch (err) {
+    console.error('Error loading tags:', err);
+    showToast('Error loading tags', 'error');
+  }
+}
+
+async function loadTasks() {
+  try {
+    // Load tasks with their tags
+    const { data: tasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (tasksError) throw tasksError;
+    
+    // Load task-tag relationships
+    const { data: taskTags, error: taskTagsError } = await supabase
+      .from('task_tags')
+      .select('task_id, tag_id');
+    
+    if (taskTagsError) throw taskTagsError;
+    
+    // Combine tasks with their tags
+    allTasks = tasks.map(task => {
+      const tagIds = taskTags
+        .filter(tt => tt.task_id === task.id)
+        .map(tt => tt.tag_id);
+      const tags = allTags.filter(t => tagIds.includes(t.id));
+      return { ...task, tags };
+    });
+    
+    renderTasks();
+  } catch (err) {
+    console.error('Error loading tasks:', err);
+    showToast('Error loading tasks', 'error');
+  }
+}
+
+// ==================================================
+// RENDERING
+// ==================================================
+function renderFilters() {
+  const container = document.getElementById('filterSection');
+  const tagTypes = [...new Set(allTags.map(t => t.type))].sort();
+  
+  container.innerHTML = tagTypes.map(type => `
+    <div class="filter-group">
+      <label>${capitalizeFirst(type)}</label>
+      <select onchange="applyFilters()" data-filter-type="${type}">
+        <option value="">All</option>
+        ${allTags
+          .filter(t => t.type === type)
+          .map(t => `<option value="${t.id}">${t.name}</option>`)
+          .join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+function renderTasks() {
+  const container = document.getElementById('tasksContainer');
+  const filteredTasks = filterTasks();
+  
+  if (filteredTasks.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <h3>No tasks found</h3>
+        <p>Try adjusting your filters or create a new task</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="tasks-grid">
+      ${filteredTasks.map(task => renderTaskCard(task)).join('')}
+    </div>
+  `;
+}
+
+function renderTaskCard(task) {
+  const statusClass = `status-${task.status || 'not_started'}`;
+  const statusLabel = (task.status || 'not_started').replace('_', ' ');
+  
+  const tagsHtml = task.tags.map(tag => `
+    <span class="tag" style="background: ${tag.color}20; color: ${tag.color}">
+      ${tag.name}
+    </span>
+  `).join('');
+  
+  const linkHtml = task.links ? `
+    <a href="${task.links}" target="_blank" class="task-link">
+      🔗 Open Link
+    </a>
+  ` : '';
+  
+  return `
+    <div class="task-card">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <h3>${escapeHtml(task.name)}</h3>
+        <span class="status-badge ${statusClass}">${capitalizeFirst(statusLabel)}</span>
+      </div>
+      ${task.notes ? `<p class="task-notes">${escapeHtml(task.notes)}</p>` : ''}
+      <div class="task-tags">${tagsHtml}</div>
+      ${linkHtml}
+      <div class="task-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editTask('${task.id}')">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')">🗑️ Delete</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTagSelector() {
+  const container = document.getElementById('tagSelector');
+  const tagTypes = [...new Set(allTags.map(t => t.type))].sort();
+  
+  container.innerHTML = tagTypes.map(type => `
+    <div class="tag-selector-group">
+      <div class="tag-selector-group-title">${type}</div>
+      <div class="tag-selector-options">
+        ${allTags
+          .filter(t => t.type === type)
+          .map(t => `
+            <span class="tag-option ${selectedTagIds.has(t.id) ? 'selected' : ''}" 
+                  style="background: ${t.color}20; color: ${t.color}"
+                  onclick="toggleTagSelection('${t.id}')">
+              ${t.name}
+            </span>
+          `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTagsTable() {
+  const container = document.getElementById('tagsContainer');
+  const tagTypes = [...new Set(allTags.map(t => t.type))].sort();
+  
+  if (allTags.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🏷️</div>
+        <h3>No tags yet</h3>
+        <p>Create your first tag to get started</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = `
+    <table class="tags-table">
+      <thead>
+        <tr>
+          <th>Color</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${allTags.map(tag => `
+          <tr>
+            <td><span class="color-preview" style="background: ${tag.color}"></span></td>
+            <td>${escapeHtml(tag.name)}</td>
+            <td>${capitalizeFirst(tag.type)}</td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="editTag('${tag.id}')">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteTag('${tag.id}')">🗑️</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ==================================================
+// FILTERING
+// ==================================================
+function filterTasks() {
+  const filterSelects = document.querySelectorAll('[data-filter-type]');
+  const activeFilters = {};
+  
+  filterSelects.forEach(select => {
+    if (select.value) {
+      activeFilters[select.dataset.filterType] = select.value;
+    }
+  });
+  
+  if (Object.keys(activeFilters).length === 0) {
+    return allTasks;
+  }
+  
+  return allTasks.filter(task => {
+    return Object.entries(activeFilters).every(([type, tagId]) => {
+      // Special handling for mood (hierarchical)
+      if (type === 'mood') {
+        const filterTag = allTags.find(t => t.id === tagId);
+        if (!filterTag) return true;
+        
+        const filterMoodIndex = MOOD_HIERARCHY.indexOf(filterTag.name);
+        const taskMoodTags = task.tags.filter(t => t.type === 'mood');
+        
+        if (taskMoodTags.length === 0) return true; // No mood = can do anytime
+        
+        return taskMoodTags.some(taskTag => {
+          const taskMoodIndex = MOOD_HIERARCHY.indexOf(taskTag.name);
+          return taskMoodIndex !== -1 && taskMoodIndex <= filterMoodIndex;
+        });
+      }
+      
+      // Regular filtering for other types
+      return task.tags.some(t => t.id === tagId);
+    });
+  });
+}
+
+function applyFilters() {
+  renderTasks();
+}
+
+function clearFilters() {
+  document.querySelectorAll('[data-filter-type]').forEach(select => {
+    select.value = '';
+  });
+  renderTasks();
+}
+
+// ==================================================
+// TASK CRUD
+// ==================================================
+function openTaskModal(taskId = null) {
+  document.getElementById('taskModal').classList.add('active');
+  document.getElementById('taskModalTitle').textContent = taskId ? 'Edit Task' : 'New Task';
+  
+  // Reset form
+  document.getElementById('taskId').value = '';
+  document.getElementById('taskName').value = '';
+  document.getElementById('taskNotes').value = '';
+  document.getElementById('taskStatus').value = 'not_started';
+  document.getElementById('taskLink').value = '';
+  selectedTagIds.clear();
+  renderTagSelector();
+}
+
+function closeTaskModal() {
+  document.getElementById('taskModal').classList.remove('active');
+}
+
+function toggleTagSelection(tagId) {
+  if (selectedTagIds.has(tagId)) {
+    selectedTagIds.delete(tagId);
+  } else {
+    selectedTagIds.add(tagId);
+  }
+  renderTagSelector();
+}
+
+async function editTask(taskId) {
+  const task = allTasks.find(t => t.id === taskId);
+  if (!task) return;
+  
+  openTaskModal(taskId);
+  
+  document.getElementById('taskId').value = task.id;
+  document.getElementById('taskName').value = task.name;
+  document.getElementById('taskNotes').value = task.notes || '';
+  document.getElementById('taskStatus').value = task.status || 'not_started';
+  document.getElementById('taskLink').value = task.links || '';
+  
+  selectedTagIds = new Set(task.tags.map(t => t.id));
+  renderTagSelector();
+}
+
+async function saveTask() {
+  const taskId = document.getElementById('taskId').value;
+  const name = document.getElementById('taskName').value.trim();
+  const notes = document.getElementById('taskNotes').value.trim();
+  const status = document.getElementById('taskStatus').value;
+  const links = document.getElementById('taskLink').value.trim();
+  
+  if (!name) {
+    showToast('Task name is required', 'error');
+    return;
+  }
+  
+  try {
+    let savedTaskId = taskId;
+    
+    if (taskId) {
+      // Update existing task
+      const { error } = await supabase
+        .from('tasks')
+        .update({ name, notes, status, links })
+        .eq('id', taskId);
+      
+      if (error) throw error;
+      
+      // Delete existing tag relationships
+      await supabaseClient.from('task_tags').delete().eq('task_id', taskId);
+    } else {
+      // Insert new task
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({ name, notes, status, links })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      savedTaskId = data.id;
+    }
+    
+    // Insert tag relationships
+    if (selectedTagIds.size > 0) {
+      const taskTags = Array.from(selectedTagIds).map(tagId => ({
+        task_id: savedTaskId,
+        tag_id: tagId
+      }));
+      
+      const { error } = await supabaseClient.from('task_tags').insert(taskTags);
+      if (error) throw error;
+    }
+    
+    closeTaskModal();
+    showToast(taskId ? 'Task updated!' : 'Task created!', 'success');
+    await loadTasks();
+  } catch (err) {
+    console.error('Error saving task:', err);
+    showToast('Error saving task', 'error');
+  }
+}
+
+function deleteTask(taskId) {
+  document.getElementById('deleteMessage').textContent = 'Are you sure you want to delete this task?';
+  document.getElementById('deleteModal').classList.add('active');
+  
+  deleteCallback = async () => {
+    try {
+      const { error } = await supabaseClient.from('tasks').delete().eq('id', taskId);
+      if (error) throw error;
+      
+      showToast('Task deleted!', 'success');
+      await loadTasks();
+    } catch (err) {
+      console.error('Error deleting task:', err);
+      showToast('Error deleting task', 'error');
+    }
+  };
+}
+
+// ==================================================
+// TAG CRUD
+// ==================================================
+function openTagModal(tagId = null) {
+  document.getElementById('tagModal').classList.add('active');
+  document.getElementById('tagModalTitle').textContent = tagId ? 'Edit Tag' : 'New Tag';
+  
+  // Reset form
+  document.getElementById('tagId').value = '';
+  document.getElementById('tagName').value = '';
+  document.getElementById('tagType').value = 'category';
+  document.getElementById('tagColor').value = '#667eea';
+}
+
+function closeTagModal() {
+  document.getElementById('tagModal').classList.remove('active');
+}
+
+async function editTag(tagId) {
+  const tag = allTags.find(t => t.id === tagId);
+  if (!tag) return;
+  
+  openTagModal(tagId);
+  
+  document.getElementById('tagId').value = tag.id;
+  document.getElementById('tagName').value = tag.name;
+  document.getElementById('tagType').value = tag.type;
+  document.getElementById('tagColor').value = tag.color;
+}
+
+async function saveTag() {
+  const tagId = document.getElementById('tagId').value;
+  const name = document.getElementById('tagName').value.trim();
+  const type = document.getElementById('tagType').value;
+  const color = document.getElementById('tagColor').value;
+  
+  if (!name) {
+    showToast('Tag name is required', 'error');
+    return;
+  }
+  
+  try {
+    if (tagId) {
+      const { error } = await supabase
+        .from('tags')
+        .update({ name, type, color })
+        .eq('id', tagId);
+      
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('tags')
+        .insert({ name, type, color });
+      
+      if (error) throw error;
+    }
+    
+    closeTagModal();
+    showToast(tagId ? 'Tag updated!' : 'Tag created!', 'success');
+    await loadTags();
+    renderFilters();
+    renderTagSelector();
+    renderTagsTable();
+  } catch (err) {
+    console.error('Error saving tag:', err);
+    showToast('Error saving tag', 'error');
+  }
+}
+
+function deleteTag(tagId) {
+  document.getElementById('deleteMessage').textContent = 'Are you sure you want to delete this tag? It will be removed from all tasks.';
+  document.getElementById('deleteModal').classList.add('active');
+  
+  deleteCallback = async () => {
+    try {
+      const { error } = await supabaseClient.from('tags').delete().eq('id', tagId);
+      if (error) throw error;
+      
+      showToast('Tag deleted!', 'success');
+      await loadTags();
+      await loadTasks();
+      renderFilters();
+      renderTagSelector();
+      renderTagsTable();
+    } catch (err) {
+      console.error('Error deleting tag:', err);
+      showToast('Error deleting tag', 'error');
+    }
+  };
+}
+
+// ==================================================
+// DELETE MODAL
+// ==================================================
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('active');
+  deleteCallback = null;
+}
+
+function confirmDelete() {
+  if (deleteCallback) {
+    deleteCallback();
+  }
+  closeDeleteModal();
+}
+
+// ==================================================
+// CHATBOT
+// ==================================================
+let chatStep = 0;
+let chatSelections = {};
+
+function initChatbot() {
+  const container = document.getElementById('chatContainer');
+  container.innerHTML = `
+    <div id="chatMessages" style="min-height: 300px; margin-bottom: 15px;"></div>
+    <button class="btn btn-primary" onclick="startChat()" style="width: 100%;">🎯 Find a Task</button>
+  `;
+}
+
+function startChat() {
+  chatStep = 0;
+  chatSelections = {};
+  
+  const container = document.getElementById('chatMessages');
+  container.innerHTML = '';
+  
+  addChatMessage("Hi! 👋 Let's find you a task.", true);
+  setTimeout(() => askChatQuestion(), 500);
+}
+
+function addChatMessage(text, isBot) {
+  const container = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.style.cssText = `
+    padding: 10px 15px;
+    margin: 8px 0;
+    border-radius: 15px;
+    max-width: 80%;
+    ${isBot 
+      ? 'background: #f0f0f0; color: #333; align-self: flex-start;' 
+      : 'background: linear-gradient(135deg, #667eea, #764ba2); color: white; margin-left: auto;'}
+  `;
+  msg.textContent = text;
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addChatOptions(options, callback) {
+  const container = document.getElementById('chatMessages');
+  const optionsDiv = document.createElement('div');
+  optionsDiv.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0;';
+  
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-secondary btn-sm';
+    btn.textContent = opt.label;
+    btn.onclick = () => {
+      addChatMessage(opt.label, false);
+      optionsDiv.remove();
+      callback(opt.value);
+    };
+    optionsDiv.appendChild(btn);
+  });
+  
+  container.appendChild(optionsDiv);
+}
+
+function askChatQuestion() {
+  const questions = [
+    {
+      question: "How are you feeling?",
+      type: 'mood',
+      getOptions: () => [
+        { label: '⚡ Energetic', value: 'Energetic' },
+        { label: '😊 Bit tired', value: 'Bit tired' },
+        { label: '😐 Tired', value: 'Tired' },
+        { label: '😴 Sleepy', value: 'Sleepy' },
+        { label: '🔄 Any', value: null }
+      ]
+    },
+    {
+      question: "Where are you?",
+      type: 'location',
+      getOptions: () => {
+        const locationTags = allTags.filter(t => t.type === 'location');
+        const options = locationTags.map(t => ({ label: t.name, value: t.id }));
+        options.push({ label: '🌍 Anywhere', value: null });
+        return options;
+      }
+    },
+    {
+      question: "What subject?",
+      type: 'subject',
+      getOptions: () => {
+        const subjectTags = allTags.filter(t => t.type === 'subject');
+        const options = subjectTags.map(t => ({ label: t.name, value: t.id }));
+        options.push({ label: '🎯 Any', value: null });
+        return options;
+      }
+    }
+  ];
+  
+  if (chatStep >= questions.length) {
+    showChatResults();
+    return;
+  }
+  
+  const q = questions[chatStep];
+  addChatMessage(q.question, true);
+  
+  setTimeout(() => {
+    addChatOptions(q.getOptions(), (value) => {
+      chatSelections[q.type] = value;
+      chatStep++;
+      setTimeout(() => askChatQuestion(), 300);
+    });
+  }, 300);
+}
+
+function showChatResults() {
+  let filtered = [...allTasks];
+  
+  // Filter by mood (hierarchical)
+  if (chatSelections.mood) {
+    const moodIndex = MOOD_HIERARCHY.indexOf(chatSelections.mood);
+    filtered = filtered.filter(task => {
+      const taskMoodTags = task.tags.filter(t => t.type === 'mood');
+      if (taskMoodTags.length === 0) return true;
+      return taskMoodTags.some(t => {
+        const taskMoodIndex = MOOD_HIERARCHY.indexOf(t.name);
+        return taskMoodIndex !== -1 && taskMoodIndex <= moodIndex;
+      });
+    });
+  }
+  
+  // Filter by location
+  if (chatSelections.location) {
+    filtered = filtered.filter(task => 
+      task.tags.some(t => t.id === chatSelections.location)
+    );
+  }
+  
+  // Filter by subject
+  if (chatSelections.subject) {
+    filtered = filtered.filter(task => 
+      task.tags.some(t => t.id === chatSelections.subject)
+    );
+  }
+  
+  if (filtered.length === 0) {
+    addChatMessage("😕 No tasks match. Try different filters!", true);
+  } else {
+    addChatMessage(`Found ${filtered.length} task(s):`, true);
+    
+    filtered.slice(0, 3).forEach(task => {
+      const container = document.getElementById('chatMessages');
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 12px;
+        margin: 8px 0;
+      `;
+      card.innerHTML = `
+        <strong>${escapeHtml(task.name)}</strong>
+        <div style="font-size: 0.85rem; color: #666; margin-top: 5px;">
+          ${task.tags.map(t => `<span style="background: ${t.color}20; color: ${t.color}; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-right: 4px;">${t.name}</span>`).join('')}
+        </div>
+        ${task.links ? `<a href="${task.links}" target="_blank" style="font-size: 0.85rem; color: #667eea; display: block; margin-top: 8px;">🔗 Open Link</a>` : ''}
+      `;
+      container.appendChild(card);
+    });
+  }
+  
+  setTimeout(() => {
+    const container = document.getElementById('chatMessages');
+    const restartBtn = document.createElement('button');
+    restartBtn.className = 'btn btn-primary';
+    restartBtn.style.cssText = 'width: 100%; margin-top: 15px;';
+    restartBtn.textContent = '🔄 Search Again';
+    restartBtn.onclick = startChat;
+    container.appendChild(restartBtn);
+  }, 500);
+}
+
+// ==================================================
+// NAVIGATION
+// ==================================================
+function switchTab(tabName) {
+  // Update tab buttons
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  
+  // Update tab content
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  document.getElementById(`${tabName}-tab`).classList.add('active');
+}
+
+// ==================================================
+// UTILITIES
+// ==================================================
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function capitalizeFirst(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ==================================================
+// START APP
+// ==================================================
+init();
+</script>
+
+</body>
+</html>
