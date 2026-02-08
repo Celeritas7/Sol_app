@@ -3,390 +3,611 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Task Finder v2</title>
+  <title>TaskBrain — Your Personal AI</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-deep: #0a0a0f;
+      --bg-surface: #12121a;
+      --bg-card: #1a1a26;
+      --bg-hover: #22222f;
+      --bg-input: #16161f;
+      --border: #2a2a3a;
+      --border-focus: #6366f1;
+      --text-primary: #e8e8f0;
+      --text-secondary: #8888a0;
+      --text-muted: #555568;
+      --accent: #6366f1;
+      --accent-glow: rgba(99,102,241,0.3);
+      --green: #10b981;
+      --green-dim: rgba(16,185,129,0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --yellow: #f59e0b;
+      --yellow-dim: rgba(245,158,11,0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.15);
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --orange: #f97316;
+      --cyan: #06b6d4;
+      --radius: 10px;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'DM Sans', sans-serif;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f4f8;
+      font-family: var(--font-sans);
+      background: var(--bg-deep);
+      color: var(--text-primary);
       min-height: 100vh;
+      overflow: hidden;
     }
 
-    /* Header */
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 15px 25px;
+    /* ========== LAYOUT ========== */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      grid-template-rows: 1fr;
+      height: 100vh;
+    }
+
+    /* ========== SIDEBAR NAV ========== */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      flex-wrap: wrap;
-      gap: 10px;
+      padding: 12px 0;
+      gap: 4px;
+      z-index: 100;
     }
 
-    .header h1 { font-size: 1.4rem; }
-
-    .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    /* Focus Banner */
-    .focus-banner {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      color: white;
-      padding: 10px 25px;
-      display: none;
-      align-items: center;
-      gap: 15px;
-      flex-wrap: wrap;
+    .sidebar .logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700;
+      margin-bottom: 16px;
+      cursor: default;
     }
 
-    .focus-banner.active { display: flex; }
-
-    .focus-banner .focus-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    .focus-tag {
-      background: rgba(255,255,255,0.25);
-      padding: 5px 12px;
-      border-radius: 15px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .focus-tag .remove-focus {
-      cursor: pointer;
-      font-weight: bold;
-      opacity: 0.8;
-    }
-
-    .focus-tag .remove-focus:hover { opacity: 1; }
-
-    /* Navigation */
-    .nav-tabs {
-      display: flex;
-      background: white;
-      border-bottom: 1px solid #ddd;
-      overflow-x: auto;
-    }
-
-    .nav-tab {
-      padding: 14px 24px;
+    .nav-btn {
+      width: 40px; height: 40px;
       border: none;
-      background: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 10px;
       cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .nav-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+    .nav-btn.active { background: var(--accent); color: white; box-shadow: 0 0 20px var(--accent-glow); }
+
+    .nav-btn .badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 8px; height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+    }
+
+    .nav-spacer { flex: 1; }
+
+    /* ========== MAIN AREA ========== */
+    .main-area {
+      display: grid;
+      grid-template-rows: 1fr;
+      overflow: hidden;
+    }
+
+    .panel { display: none; overflow: hidden; }
+    .panel.active { display: flex; flex-direction: column; }
+
+    /* ========== CHAT PANEL (PRIMARY) ========== */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .chat-header .ai-avatar {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .chat-header-info h2 {
       font-size: 0.95rem;
-      color: #666;
-      border-bottom: 3px solid transparent;
+      font-weight: 600;
+    }
+
+    .chat-header-info span {
+      font-size: 0.75rem;
+      color: var(--green);
+      font-family: var(--font-mono);
+    }
+
+    .chat-header-actions {
+      margin-left: auto;
+      display: flex; gap: 8px;
+    }
+
+    .context-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      display: flex; align-items: center; gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .context-pill:hover { border-color: var(--accent); }
+    .context-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .msg {
+      max-width: 85%;
+      animation: msgIn 0.3s ease;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user { align-self: flex-end; }
+    .msg.bot { align-self: flex-start; }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.bot .msg-bubble {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-bubble code {
+      font-family: var(--font-mono);
+      background: rgba(99,102,241,0.15);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+
+    .msg-bubble strong { color: var(--accent); font-weight: 600; }
+
+    .msg-bubble .task-card-inline {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 8px 0;
+      font-size: 0.85rem;
+    }
+
+    .msg-bubble .task-card-inline .task-name {
+      font-weight: 600; color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .msg-bubble .task-card-inline .task-meta {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+    }
+
+    .msg-bubble .tag-inline {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      margin: 2px 2px;
+    }
+
+    .msg-time {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .msg.user .msg-time { text-align: right; }
+
+    .typing-indicator {
+      display: flex; gap: 4px; padding: 12px 16px;
+    }
+
+    .typing-indicator span {
+      width: 6px; height: 6px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: typingDot 1.4s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingDot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* Quick Actions Chips */
+    .quick-chips {
+      padding: 8px 24px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .chip {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      cursor: pointer;
       transition: all 0.2s;
       white-space: nowrap;
     }
 
-    .nav-tab:hover { color: #667eea; background: #f8f9ff; }
-    .nav-tab.active { color: #667eea; border-bottom-color: #667eea; font-weight: 600; }
+    .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-card); }
 
-    /* Main Content */
-    .main-content {
-      padding: 20px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    /* Buttons */
-    .btn {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-secondary { background: #e0e0e0; color: #333; }
-    .btn-secondary:hover { background: #d0d0d0; }
-
-    .btn-danger { background: #e74c3c; color: white; }
-    .btn-danger:hover { background: #c0392b; }
-
-    .btn-success { background: #27ae60; color: white; }
-    .btn-success:hover { background: #219a52; }
-
-    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
-    .btn-xs { padding: 4px 8px; font-size: 0.75rem; }
-
-    /* Cards */
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .card-title { font-size: 1.1rem; font-weight: 600; color: #333; }
-
-    /* Filters */
-    .filter-section {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 15px;
-    }
-
-    .filter-group { min-width: 150px; }
-
-    .filter-group label {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 500;
-      color: #555;
-      font-size: 0.85rem;
-    }
-
-    .filter-group select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      background: white;
-    }
-
-    /* Tree View */
-    .tree-container {
-      max-height: 70vh;
-      overflow-y: auto;
-      padding: 10px 0;
-    }
-
-    .tree-node {
-      margin-left: 0;
-      padding: 8px 0;
-    }
-
-    .tree-node-content {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 15px;
-      background: #fafafa;
-      border-radius: 10px;
-      border-left: 4px solid #667eea;
-      transition: all 0.2s;
-    }
-
-    .tree-node-content:hover {
-      background: #f0f4ff;
-      transform: translateX(3px);
-    }
-
-    .tree-node-content.focused {
-      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-      border-left-color: #f5576c;
-    }
-
-    .tree-node-content.done {
-      opacity: 0.6;
-      border-left-color: #27ae60;
-    }
-
-    .tree-node-content.blocked {
-      border-left-color: #e74c3c;
-    }
-
-    .tree-toggle {
-      cursor: pointer;
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #667eea;
-      color: white;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: bold;
+    /* Chat Input */
+    .chat-input-area {
+      padding: 12px 24px 20px;
+      border-top: 1px solid var(--border);
       flex-shrink: 0;
     }
 
-    .tree-toggle.empty {
-      background: transparent;
-      color: transparent;
+    .chat-input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 4px;
+      transition: border-color 0.2s;
     }
 
-    .tree-node-info { flex: 1; min-width: 0; }
+    .chat-input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
 
-    .tree-node-name {
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 4px;
+    .chat-input-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 12px 16px;
+      color: var(--text-primary);
+      font-size: 0.92rem;
+      font-family: var(--font-sans);
+      outline: none;
+    }
+
+    .chat-input-wrap input::placeholder { color: var(--text-muted); }
+
+    .send-btn {
+      width: 40px; height: 40px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover { background: #5558e6; transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ========== TREE PANEL ========== */
+    .tree-panel-inner {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .panel-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .panel-header h2 { font-size: 1rem; font-weight: 600; }
+
+    .panel-header-actions { display: flex; gap: 8px; }
+
+    .btn-ghost {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: none;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+    }
+
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Tree Nodes */
+    .tree-node { margin-left: 0; padding: 3px 0; }
+
+    .tree-node-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: default;
+      transition: background 0.15s;
     }
 
-    .tree-node-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 6px;
+    .tree-node-row:hover { background: var(--bg-hover); }
+
+    .tree-toggle {
+      width: 18px; height: 18px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      flex-shrink: 0;
+      transition: all 0.15s;
     }
+
+    .tree-toggle:hover { background: var(--bg-card); color: var(--text-secondary); }
+    .tree-toggle.leaf { color: transparent; cursor: default; }
+
+    .tree-status {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tree-status.not_started { background: var(--text-muted); }
+    .tree-status.in_progress { background: var(--yellow); box-shadow: 0 0 6px var(--yellow-dim); }
+    .tree-status.done { background: var(--green); box-shadow: 0 0 6px var(--green-dim); }
+    .tree-status.blocked { background: var(--red); box-shadow: 0 0 6px var(--red-dim); }
+    .tree-status.recurring { background: var(--cyan); }
+    .tree-status.someday { background: var(--text-muted); opacity: 0.5; }
+
+    .tree-name {
+      flex: 1;
+      font-size: 0.85rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tree-name.done { text-decoration: line-through; opacity: 0.5; }
+
+    .tree-tags-mini {
+      display: flex; gap: 3px; flex-shrink: 0;
+    }
+
+    .tag-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tree-actions {
+      display: flex; gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+
+    .tree-node-row:hover .tree-actions { opacity: 1; }
+
+    .tree-action-btn {
+      width: 24px; height: 24px;
+      border: none;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .tree-action-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .tree-action-btn.danger:hover { color: var(--red); }
 
     .tree-children {
-      margin-left: 30px;
-      border-left: 2px dashed #ddd;
-      padding-left: 15px;
+      margin-left: 20px;
+      border-left: 1px solid var(--border);
+      padding-left: 8px;
     }
 
     .tree-children.collapsed { display: none; }
 
-    /* Tags */
-    .tag {
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 0.7rem;
+    /* ========== HABITS PANEL ========== */
+    .habits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .stat-card h3 {
+      font-size: 0.8rem;
+      color: var(--text-muted);
       font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
     }
 
-    .tag.inherited {
-      opacity: 0.6;
-      font-style: italic;
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
     }
 
-    .status-badge {
-      padding: 3px 8px;
-      border-radius: 10px;
+    .stat-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .heat-grid {
+      display: grid;
+      grid-template-columns: repeat(24, 1fr);
+      gap: 2px;
+      margin-top: 12px;
+    }
+
+    .heat-cell {
+      aspect-ratio: 1;
+      border-radius: 2px;
+      background: var(--bg-hover);
+      position: relative;
+    }
+
+    .heat-cell.l1 { background: rgba(99,102,241,0.2); }
+    .heat-cell.l2 { background: rgba(99,102,241,0.4); }
+    .heat-cell.l3 { background: rgba(99,102,241,0.6); }
+    .heat-cell.l4 { background: rgba(99,102,241,0.85); }
+
+    .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-top: 12px; }
+
+    .bar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bar {
+      width: 100%;
+      background: var(--accent);
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+      transition: height 0.3s;
+    }
+
+    .bar-label {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* ========== TAGS PANEL ========== */
+    .tags-panel-inner {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .tag-type-section { margin-bottom: 24px; }
+
+    .tag-type-title {
       font-size: 0.7rem;
       font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
     }
 
-    .status-not_started { background: #eceff1; color: #546e7a; }
-    .status-in_progress { background: #fff8e1; color: #f9a825; }
-    .status-done { background: #e8f5e9; color: #2e7d32; }
-    .status-blocked { background: #ffebee; color: #c62828; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
 
-    .tree-node-actions {
-      display: flex;
-      gap: 5px;
-      flex-shrink: 0;
-    }
-
-    /* Quick Chat */
-    .chat-container {
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    .chat-messages {
-      min-height: 300px;
-      max-height: 50vh;
-      overflow-y: auto;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 10px;
-      margin-bottom: 15px;
-    }
-
-    .chat-message {
-      padding: 10px 15px;
-      margin: 8px 0;
-      border-radius: 15px;
-      max-width: 85%;
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .chat-message.bot {
-      background: white;
-      color: #333;
-      align-self: flex-start;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .chat-message.user {
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
-      margin-left: auto;
-    }
-
-    .chat-input-area {
-      display: flex;
-      gap: 10px;
-    }
-
-    .chat-input {
-      flex: 1;
-      padding: 12px 15px;
-      border: 1px solid #ddd;
-      border-radius: 25px;
-      font-size: 0.95rem;
-      outline: none;
-    }
-
-    .chat-input:focus { border-color: #667eea; }
-
-    .quick-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 15px;
-    }
-
-    .quick-action {
-      padding: 8px 15px;
-      background: white;
-      border: 1px solid #ddd;
+    .tag-pill {
+      padding: 6px 14px;
       border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
       cursor: pointer;
-      font-size: 0.85rem;
       transition: all 0.2s;
+      border: 1px solid transparent;
     }
 
-    .quick-action:hover {
-      background: #667eea;
-      color: white;
-      border-color: #667eea;
-    }
+    .tag-pill:hover { transform: scale(1.05); }
+    .tag-pill.focused { border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.1); }
 
-    /* Modal */
+    /* ========== MODAL ========== */
     .modal-overlay {
       display: none;
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
       z-index: 1000;
       justify-content: center;
       align-items: center;
@@ -396,484 +617,462 @@
     .modal-overlay.active { display: flex; }
 
     .modal {
-      background: white;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 16px;
       width: 100%;
-      max-width: 550px;
-      max-height: 90vh;
+      max-width: 480px;
+      max-height: 85vh;
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
 
-    .modal-header {
+    .modal-head {
       padding: 18px 20px;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .modal-header h2 { font-size: 1.2rem; }
+    .modal-head h2 { font-size: 1rem; }
 
     .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
+      background: none; border: none;
+      color: var(--text-muted); font-size: 20px;
       cursor: pointer;
-      color: #999;
     }
-
-    .modal-close:hover { color: #333; }
 
     .modal-body { padding: 20px; }
 
-    .modal-footer {
-      padding: 15px 20px;
-      border-top: 1px solid #eee;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
+    .modal-foot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 8px;
     }
 
-    /* Form */
-    .form-group { margin-bottom: 18px; }
+    .form-group { margin-bottom: 16px; }
 
     .form-group label {
       display: block;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
       font-weight: 500;
-      color: #333;
-      font-size: 0.9rem;
+      color: var(--text-secondary);
     }
 
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
+    .form-input {
       width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ddd;
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      font-size: 0.95rem;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-family: var(--font-sans);
       transition: border-color 0.2s;
     }
 
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: #667eea;
-    }
+    .form-input:focus { outline: none; border-color: var(--accent); }
 
-    .form-group textarea { resize: vertical; min-height: 70px; }
+    .form-input option { background: var(--bg-card); }
 
-    /* Tag Selector */
-    .tag-selector {
-      border: 1px solid #ddd;
+    .tag-selector-grid {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 12px;
-      max-height: 200px;
+      max-height: 160px;
       overflow-y: auto;
     }
 
-    .tag-type-group { margin-bottom: 12px; }
-
-    .tag-type-title {
+    .tag-opt {
+      padding: 4px 12px;
+      border-radius: 14px;
       font-size: 0.75rem;
-      font-weight: 600;
-      color: #888;
-      margin-bottom: 6px;
-      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 2px solid transparent;
     }
 
-    .tag-options { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-opt:hover { transform: scale(1.05); }
+    .tag-opt.selected { border-color: white; }
 
-    .tag-option {
-      padding: 5px 12px;
-      border-radius: 15px;
-      font-size: 0.8rem;
+    .btn-primary {
+      padding: 8px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
       cursor: pointer;
-      border: 2px solid transparent;
+      font-family: var(--font-sans);
       transition: all 0.2s;
     }
 
-    .tag-option:hover { transform: scale(1.05); }
-    .tag-option.selected { border-color: #333; }
+    .btn-primary:hover { background: #5558e6; }
 
-    /* Tags Table */
-    .tags-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 15px;
+    .btn-cancel {
+      padding: 8px 20px;
+      background: none;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: var(--font-sans);
     }
 
-    .tag-card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .tag-color {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .tag-info { flex: 1; }
-    .tag-name { font-weight: 600; color: #333; }
-    .tag-type-label { font-size: 0.8rem; color: #888; }
-
-    .tag-actions { display: flex; gap: 5px; }
-
-    /* Task Results */
-    .task-results {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-
-    .task-result-card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      border-left: 4px solid #667eea;
-    }
-
-    .task-result-card h4 { margin-bottom: 8px; color: #333; }
-
-    .task-result-card .path {
-      font-size: 0.8rem;
-      color: #888;
-      margin-bottom: 8px;
-    }
-
-    /* Loading & Empty */
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #666;
-    }
-
-    .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #667eea;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 15px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 50px 20px;
-      color: #888;
-    }
-
-    .empty-state-icon { font-size: 3.5rem; margin-bottom: 15px; }
-
-    /* Toast */
+    /* ========== TOAST ========== */
     .toast {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      background: #333;
-      color: white;
-      border-radius: 8px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      bottom: 20px; right: 20px;
+      padding: 10px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 10px;
+      font-size: 0.85rem;
       z-index: 2000;
-      animation: slideIn 0.3s ease;
+      animation: toastIn 0.3s ease;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
     }
 
-    .toast.success { background: #27ae60; }
-    .toast.error { background: #e74c3c; }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--red); }
 
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
+    @keyframes toastIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
 
-    /* Responsive */
+    /* ========== RESPONSIVE ========== */
     @media (max-width: 768px) {
-      .header { padding: 12px 15px; }
-      .header h1 { font-size: 1.2rem; }
-      .main-content { padding: 15px; }
-      .tree-children { margin-left: 20px; padding-left: 10px; }
-      .tree-node-actions { flex-wrap: wrap; }
+      .app-shell { grid-template-columns: 48px 1fr; }
+      .sidebar { padding: 8px 0; }
+      .nav-btn { width: 36px; height: 36px; font-size: 16px; }
+      .chat-messages { padding: 12px 16px; }
+      .chat-input-area { padding: 8px 16px 12px; }
+      .quick-chips { padding: 6px 16px; }
+      .msg { max-width: 92%; }
     }
   </style>
 </head>
 <body>
 
-<!-- Header -->
-<div class="header">
-  <h1>🎯 Task Finder</h1>
-  <div class="header-actions">
-    <button class="btn btn-primary" onclick="openTaskModal()">+ New Task</button>
-    <button class="btn btn-secondary" onclick="openTagModal()">+ New Tag</button>
-  </div>
-</div>
+<!-- ========== APP SHELL ========== -->
+<div class="app-shell">
 
-<!-- Focus Banner -->
-<div class="focus-banner" id="focusBanner">
-  <span>🎯 <strong>Focus:</strong></span>
-  <div class="focus-tags" id="focusTags"></div>
-  <button class="btn btn-sm" style="background: rgba(255,255,255,0.25); color: white;" onclick="clearAllFocus()">Clear All</button>
-</div>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">🧠</div>
+    <button class="nav-btn active" onclick="switchPanel('chat')" title="Chat">💬</button>
+    <button class="nav-btn" onclick="switchPanel('tree')" title="Task Tree">🌳</button>
+    <button class="nav-btn" onclick="switchPanel('habits')" title="Habits">📊</button>
+    <button class="nav-btn" onclick="switchPanel('tags')" title="Tags">🏷️</button>
+    <div class="nav-spacer"></div>
+    <button class="nav-btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
+  </nav>
 
-<!-- Navigation -->
-<div class="nav-tabs">
-  <button class="nav-tab active" onclick="switchTab('tasks')">📋 Tasks</button>
-  <button class="nav-tab" onclick="switchTab('tags')">🏷️ Tags</button>
-  <button class="nav-tab" onclick="switchTab('chat')">💬 Quick Chat</button>
-  <button class="nav-tab" onclick="switchTab('find')">🔍 Find Task</button>
-</div>
+  <!-- Main Area -->
+  <div class="main-area">
 
-<!-- Main Content -->
-<div class="main-content">
-
-  <!-- Tasks Tab -->
-  <div id="tasks-tab" class="tab-content active">
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">📋 Task Tree</span>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-sm btn-secondary" onclick="expandAllNodes()">Expand All</button>
-          <button class="btn btn-sm btn-secondary" onclick="collapseAllNodes()">Collapse All</button>
+    <!-- ===== CHAT PANEL ===== -->
+    <div id="panel-chat" class="panel active chat-panel">
+      <div class="chat-header">
+        <div class="ai-avatar">🧠</div>
+        <div class="chat-header-info">
+          <h2>TaskBrain</h2>
+          <span>● online</span>
+        </div>
+        <div class="chat-header-actions">
+          <div class="context-pill" onclick="cycleLocation()">
+            <span class="dot" style="background:var(--blue)"></span>
+            <span id="ctxLocation">Room</span>
+          </div>
+          <div class="context-pill" onclick="cycleMood()">
+            <span class="dot" style="background:var(--green)"></span>
+            <span id="ctxMood">Energetic</span>
+          </div>
+          <div class="context-pill">
+            <span class="dot" style="background:var(--yellow)"></span>
+            <span id="ctxTime">--:--</span>
+          </div>
         </div>
       </div>
-      
-      <div class="filter-section" id="filterSection"></div>
-      
-      <div class="tree-container" id="treeContainer">
-        <div class="loading">
-          <div class="loading-spinner"></div>
-          <p>Loading tasks...</p>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Tags Tab -->
-  <div id="tags-tab" class="tab-content">
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">🏷️ Manage Tags</span>
-        <button class="btn btn-primary btn-sm" onclick="openTagModal()">+ New Tag</button>
+      <div class="chat-messages" id="chatMessages"></div>
+
+      <div class="quick-chips" id="quickChips">
+        <span class="chip" onclick="sendQuick('What should I do now?')">What should I do?</span>
+        <span class="chip" onclick="sendQuick('Show my tree')">Show tree</span>
+        <span class="chip" onclick="sendQuick('What\\'s pending?')">Pending tasks</span>
+        <span class="chip" onclick="sendQuick('My habits')">My habits</span>
+        <span class="chip" onclick="sendQuick('I\\'m on the train')">🚆 On train</span>
       </div>
-      <div id="tagsContainer">
-        <div class="loading">
-          <div class="loading-spinner"></div>
-          <p>Loading tags...</p>
+
+      <div class="chat-input-area">
+        <div class="chat-input-wrap">
+          <input type="text" id="chatInput" placeholder="Dump your tasks, ask anything..." 
+                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" autocomplete="off">
+          <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Quick Chat Tab -->
-  <div id="chat-tab" class="tab-content">
-    <div class="chat-container">
-      <div class="card">
-        <div class="card-title" style="margin-bottom: 15px;">💬 Quick Chat - Set Focus</div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Type a command... (e.g., 'focus on AI')" onkeypress="if(event.key==='Enter')sendChatMessage()">
-          <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+    <!-- ===== TREE PANEL ===== -->
+    <div id="panel-tree" class="panel">
+      <div class="panel-header">
+        <h2>📋 Task Tree</h2>
+        <div class="panel-header-actions">
+          <button class="btn-ghost" onclick="expandAll()">Expand</button>
+          <button class="btn-ghost" onclick="collapseAll()">Collapse</button>
+          <button class="btn-ghost" onclick="openTaskModal()">+ Task</button>
         </div>
-        <div class="quick-actions" id="quickActions"></div>
       </div>
+      <div class="tree-panel-inner" id="treeContainer"></div>
     </div>
-  </div>
 
-  <!-- Find Task Tab -->
-  <div id="find-tab" class="tab-content">
-    <div class="chat-container">
-      <div class="card">
-        <div class="card-title" style="margin-bottom: 15px;">🔍 Find a Task</div>
-        <div id="findContainer"></div>
+    <!-- ===== HABITS PANEL ===== -->
+    <div id="panel-habits" class="panel">
+      <div class="panel-header">
+        <h2>📊 Habit Insights</h2>
+        <div class="panel-header-actions">
+          <button class="btn-ghost" onclick="refreshHabits()">Refresh</button>
+        </div>
       </div>
+      <div class="habits-grid" id="habitsContainer"></div>
     </div>
-  </div>
 
+    <!-- ===== TAGS PANEL ===== -->
+    <div id="panel-tags" class="panel">
+      <div class="panel-header">
+        <h2>🏷️ Tags</h2>
+        <div class="panel-header-actions">
+          <button class="btn-ghost" onclick="openTagModal()">+ Tag</button>
+        </div>
+      </div>
+      <div class="tags-panel-inner" id="tagsContainer"></div>
+    </div>
+
+  </div>
 </div>
 
-<!-- Task Modal -->
+<!-- ===== TASK MODAL ===== -->
 <div class="modal-overlay" id="taskModal">
   <div class="modal">
-    <div class="modal-header">
+    <div class="modal-head">
       <h2 id="taskModalTitle">New Task</h2>
-      <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+      <button class="modal-close" onclick="closeTaskModal()">✕</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="taskId">
-      
+      <input type="hidden" id="editTaskId">
       <div class="form-group">
-        <label>Task Name *</label>
-        <input type="text" id="taskName" placeholder="Enter task name">
+        <label>Task Name</label>
+        <input type="text" class="form-input" id="fTaskName" placeholder="What needs to be done?">
       </div>
-      
       <div class="form-group">
         <label>Parent Task</label>
-        <select id="taskParent">
-          <option value="">None (Root Task)</option>
-        </select>
+        <select class="form-input" id="fTaskParent"><option value="">Root (No parent)</option></select>
       </div>
-      
       <div class="form-group">
         <label>Status</label>
-        <select id="taskStatus">
+        <select class="form-input" id="fTaskStatus">
           <option value="not_started">Not Started</option>
           <option value="in_progress">In Progress</option>
           <option value="done">Done</option>
           <option value="blocked">Blocked</option>
+          <option value="someday">Someday</option>
         </select>
       </div>
-      
+      <div class="form-group">
+        <label>Energy Required</label>
+        <select class="form-input" id="fTaskEnergy">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Preferred Time</label>
+        <select class="form-input" id="fTaskTime">
+          <option value="">Anytime</option>
+          <option value="morning">Morning</option>
+          <option value="afternoon">Afternoon</option>
+          <option value="evening">Evening</option>
+          <option value="night">Night</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Estimated Minutes</label>
+        <input type="number" class="form-input" id="fTaskMinutes" placeholder="e.g., 30">
+      </div>
       <div class="form-group">
         <label>Notes</label>
-        <textarea id="taskNotes" placeholder="Additional notes..."></textarea>
+        <textarea class="form-input" id="fTaskNotes" rows="2" placeholder="Any notes..."></textarea>
       </div>
-      
       <div class="form-group">
         <label>Link</label>
-        <input type="text" id="taskLinks" placeholder="https://... or file path">
+        <input type="text" class="form-input" id="fTaskLink" placeholder="https://...">
       </div>
-      
       <div class="form-group">
-        <label>Tags (own tags, not inherited)</label>
-        <div class="tag-selector" id="taskTagSelector"></div>
+        <label>Tags</label>
+        <div class="tag-selector-grid" id="fTaskTags"></div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeTaskModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveTask()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Tag Modal -->
+<!-- ===== TAG MODAL ===== -->
 <div class="modal-overlay" id="tagModal">
-  <div class="modal" style="max-width: 400px;">
-    <div class="modal-header">
-      <h2 id="tagModalTitle">New Tag</h2>
-      <button class="modal-close" onclick="closeTagModal()">&times;</button>
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head">
+      <h2>New Tag</h2>
+      <button class="modal-close" onclick="closeTagModal()">✕</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="tagId">
-      
       <div class="form-group">
-        <label>Tag Name *</label>
-        <input type="text" id="tagName" placeholder="Enter tag name">
+        <label>Name</label>
+        <input type="text" class="form-input" id="fTagName">
       </div>
-      
       <div class="form-group">
-        <label>Type *</label>
-        <select id="tagType">
+        <label>Type</label>
+        <select class="form-input" id="fTagType">
           <option value="subject">Subject</option>
           <option value="category">Category</option>
           <option value="mood">Mood</option>
           <option value="location">Location</option>
           <option value="duration">Duration</option>
           <option value="priority">Priority</option>
-          <option value="project">Project</option>
-          <option value="tool">Tool</option>
+          <option value="time_slot">Time Slot</option>
+          <option value="energy">Energy</option>
         </select>
       </div>
-      
       <div class="form-group">
         <label>Color</label>
-        <input type="color" id="tagColor" value="#667eea" style="width: 100%; height: 45px; cursor: pointer;">
+        <input type="color" class="form-input" id="fTagColor" value="#6366f1" style="height:42px;cursor:pointer;">
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeTagModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTag()">Save Tag</button>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeTagModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveTag()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal-overlay" id="deleteModal">
-  <div class="modal" style="max-width: 400px;">
-    <div class="modal-header">
-      <h2>Confirm Delete</h2>
-      <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+<!-- ===== SETTINGS MODAL ===== -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h2>⚙️ Settings</h2>
+      <button class="modal-close" onclick="closeSettingsModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p id="deleteMessage">Are you sure?</p>
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" class="form-input" id="fSettingsName" placeholder="Name">
+      </div>
+      <div class="form-group">
+        <label>Wake Time (hour 0-23)</label>
+        <input type="number" class="form-input" id="fSettingsWake" value="6" min="0" max="23">
+      </div>
+      <div class="form-group">
+        <label>Sleep Time (hour 0-23)</label>
+        <input type="number" class="form-input" id="fSettingsSleep" value="23" min="0" max="23">
+      </div>
+      <div class="form-group">
+        <label>Anthropic API Key (optional, for smarter AI)</label>
+        <input type="password" class="form-input" id="fSettingsApiKey" placeholder="sk-ant-...">
+      </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeSettingsModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
     </div>
   </div>
 </div>
 
 <script>
-// ==================================================
+// ================================================================
 // SUPABASE CONFIG
-// ==================================================
-const SUPABASE_URL = 'https://wylxvmkcrexwfpjpbhyy.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHh2bWtjcmV4d2ZwanBiaHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MzkxMDYsImV4cCI6MjA4NDIxNTEwNn0.6Bxo42hx4jwlJGWnfjiTpiDUsYfc1QLTN3YtrU1efak';
-
+// ================================================================
+const SUPABASE_URL = 'https://gshxdikyngzhmwpeysvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzaHhkaWt5bmd6aG13cGV5c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMjY2NTEsImV4cCI6MjA4MzgwMjY1MX0.VGd7PS7Bs154nNJZ0nvFRfwZ0bBv9Vw8IkHLFk9_Ojs';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ==================================================
+// ================================================================
 // GLOBAL STATE
-// ==================================================
+// ================================================================
 let allTasks = [];
 let allTags = [];
-let taskTagsMap = {};  // task_id -> [tag_ids]
+let taskTagsMap = {};
+let activityLog = [];
+let chatMemory = {};
 let selectedTagIds = new Set();
 let collapsedNodes = new Set();
-let currentFilters = {};
-let deleteCallback = null;
+let isProcessing = false;
+let anthropicApiKey = localStorage.getItem('tb_api_key') || '';
 
 const MOOD_HIERARCHY = ['Energetic', 'Bit tired', 'Tired', 'Sleepy'];
+const MOOD_COLORS = { 'Energetic': 'var(--green)', 'Bit tired': 'var(--yellow)', 'Tired': 'var(--orange)', 'Sleepy': 'var(--text-muted)' };
 
-// ==================================================
-// INITIALIZATION
-// ==================================================
+let currentContext = {
+  location: 'Room',
+  mood: 'Energetic',
+  timeSlot: 'morning'
+};
+
+// ================================================================
+// INIT
+// ================================================================
 async function init() {
-  await Promise.all([loadTags(), loadTasks(), loadTaskTags()]);
-  renderFilters();
-  renderTree();
-  renderTagsGrid();
-  initChat();
-  initFindTask();
-  updateFocusBanner();
+  updateClock();
+  setInterval(updateClock, 60000);
+  
+  try {
+    await Promise.all([loadTags(), loadTasks(), loadTaskTags(), loadChatMemory(), loadActivityLog()]);
+    
+    // Restore context from memory
+    if (chatMemory.current_location) currentContext.location = chatMemory.current_location;
+    if (chatMemory.current_mood) currentContext.mood = chatMemory.current_mood;
+    updateContextDisplay();
+    
+    renderTree();
+    renderTags();
+    renderHabits();
+    
+    // Welcome message
+    const name = chatMemory.user_name || 'there';
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 21 ? 'Good evening' : 'Hey';
+    const pendingCount = allTasks.filter(t => t.status !== 'done' && !allTasks.some(c => c.parent_id === t.id)).length;
+    
+    addBotMsg(`${greeting}, <strong>${esc(name)}</strong>! 🧠\n\nYou have <strong>${pendingCount} actionable tasks</strong>. I'm your personal task brain — tell me what's on your mind and I'll organize it for you.\n\nTry things like:\n• <code>add study kanji under Japanese self study</code>\n• <code>I need to: review paper, fix bug, call mom</code>\n• <code>What should I do right now?</code>\n• <code>mark statistics as done</code>\n• <code>I'm on the train, what can I do?</code>`);
+  } catch (e) {
+    console.error('Init error:', e);
+    addBotMsg('⚠️ Error connecting to database. Please check your Supabase config.');
+  }
 }
 
-// ==================================================
+// ================================================================
 // DATA LOADING
-// ==================================================
+// ================================================================
 async function loadTags() {
-  const { data, error } = await db.from('tags').select('*').order('type').order('name');
-  if (error) { console.error(error); showToast('Error loading tags', 'error'); return; }
+  const { data } = await db.from('mind_map_app_tags').select('*').order('sort_order').order('name');
   allTags = data || [];
 }
 
 async function loadTasks() {
-  const { data, error } = await db.from('tasks').select('*').order('created_at');
-  if (error) { console.error(error); showToast('Error loading tasks', 'error'); return; }
+  const { data } = await db.from('mind_map_app_tasks').select('*').order('created_at');
   allTasks = data || [];
 }
 
 async function loadTaskTags() {
-  const { data, error } = await db.from('task_tags').select('*');
-  if (error) { console.error(error); return; }
+  const { data } = await db.from('mind_map_app_task_tags').select('*');
   taskTagsMap = {};
   (data || []).forEach(tt => {
     if (!taskTagsMap[tt.task_id]) taskTagsMap[tt.task_id] = [];
@@ -881,255 +1080,953 @@ async function loadTaskTags() {
   });
 }
 
-// ==================================================
-// TAG INHERITANCE
-// ==================================================
-function getAncestorIds(taskId) {
-  const ancestors = [];
-  let current = allTasks.find(t => t.id === taskId);
-  while (current && current.parent_id) {
-    ancestors.push(current.parent_id);
-    current = allTasks.find(t => t.id === current.parent_id);
-  }
-  return ancestors;
+async function loadChatMemory() {
+  const { data } = await db.from('mind_map_app_chat_memory').select('*');
+  chatMemory = {};
+  (data || []).forEach(m => { chatMemory[m.key] = m.value; });
 }
 
-function getInheritedTags(taskId) {
-  const ownTagIds = taskTagsMap[taskId] || [];
-  const ancestorIds = getAncestorIds(taskId);
+async function loadActivityLog() {
+  const { data } = await db.from('mind_map_app_activity_log').select('*').order('created_at', { ascending: false }).limit(500);
+  activityLog = data || [];
+}
+
+async function setMemory(key, value) {
+  chatMemory[key] = value;
+  await db.from('mind_map_app_chat_memory').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+}
+
+async function logActivity(taskId, taskName, action, durationMin = null) {
+  const now = new Date();
+  const locTag = allTags.find(t => t.type === 'location' && t.name === currentContext.location);
+  const moodTag = allTags.find(t => t.type === 'mood' && t.name === currentContext.mood);
   
-  const inheritedTagIds = new Set();
-  ancestorIds.forEach(aid => {
-    (taskTagsMap[aid] || []).forEach(tid => inheritedTagIds.add(tid));
-  });
+  const entry = {
+    task_id: taskId,
+    task_name: taskName,
+    action,
+    location_tag_id: locTag?.id || null,
+    mood_tag_id: moodTag?.id || null,
+    day_of_week: now.getDay(),
+    hour_of_day: now.getHours(),
+    duration_minutes: durationMin
+  };
   
-  const ownTags = allTags.filter(t => ownTagIds.includes(t.id)).map(t => ({ ...t, inherited: false }));
-  const inherited = allTags.filter(t => inheritedTagIds.has(t.id) && !ownTagIds.includes(t.id)).map(t => ({ ...t, inherited: true }));
-  
-  return [...ownTags, ...inherited];
+  await db.from('mind_map_app_activity_log').insert(entry);
+  activityLog.unshift(entry);
+}
+
+// ================================================================
+// TAG INHERITANCE
+// ================================================================
+function getAncestorIds(taskId) {
+  const a = [];
+  let cur = allTasks.find(t => t.id === taskId);
+  while (cur?.parent_id) { a.push(cur.parent_id); cur = allTasks.find(t => t.id === cur.parent_id); }
+  return a;
 }
 
 function getAllTagsForTask(taskId) {
-  return getInheritedTags(taskId);
+  const own = (taskTagsMap[taskId] || []).map(id => allTags.find(t => t.id === id)).filter(Boolean).map(t => ({...t, inherited: false}));
+  const ancestorIds = getAncestorIds(taskId);
+  const ownIds = new Set(own.map(t => t.id));
+  const inherited = [];
+  ancestorIds.forEach(aid => {
+    (taskTagsMap[aid] || []).forEach(tid => {
+      if (!ownIds.has(tid)) {
+        const tag = allTags.find(t => t.id === tid);
+        if (tag) { inherited.push({...tag, inherited: true}); ownIds.add(tid); }
+      }
+    });
+  });
+  return [...own, ...inherited];
 }
 
-// ==================================================
-// TREE BUILDING
-// ==================================================
-function buildTree() {
-  const taskMap = {};
-  allTasks.forEach(t => { taskMap[t.id] = { ...t, children: [] }; });
+// ================================================================
+// CONTEXT MANAGEMENT
+// ================================================================
+function getTimeSlot() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'morning';
+  if (h >= 12 && h < 17) return 'afternoon';
+  if (h >= 17 && h < 21) return 'evening';
+  return 'night';
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('ctxTime').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  currentContext.timeSlot = getTimeSlot();
+}
+
+function updateContextDisplay() {
+  document.getElementById('ctxLocation').textContent = currentContext.location;
+  document.getElementById('ctxMood').textContent = currentContext.mood;
+  const moodDot = document.querySelector('#ctxMood').previousElementSibling;
+  moodDot.style.background = MOOD_COLORS[currentContext.mood] || 'var(--green)';
+}
+
+function cycleLocation() {
+  const locs = allTags.filter(t => t.type === 'location').map(t => t.name);
+  const i = locs.indexOf(currentContext.location);
+  currentContext.location = locs[(i + 1) % locs.length];
+  updateContextDisplay();
+  setMemory('current_location', currentContext.location);
+  showToast(`📍 Location: ${currentContext.location}`);
+}
+
+function cycleMood() {
+  const i = MOOD_HIERARCHY.indexOf(currentContext.mood);
+  currentContext.mood = MOOD_HIERARCHY[(i + 1) % MOOD_HIERARCHY.length];
+  updateContextDisplay();
+  setMemory('current_mood', currentContext.mood);
+  showToast(`${currentContext.mood === 'Energetic' ? '⚡' : '😴'} Mood: ${currentContext.mood}`);
+}
+
+// ================================================================
+// CHAT ENGINE
+// ================================================================
+function addBotMsg(html) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="msg-bubble">${html.replace(/\n/g, '<br>')}</div><div class="msg-time">${new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:false})}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addUserMsg(text) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="msg-bubble">${esc(text)}</div><div class="msg-time">${new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:false})}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.id = 'typingMsg';
+  div.innerHTML = '<div class="msg-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping() {
+  document.getElementById('typingMsg')?.remove();
+}
+
+function sendQuick(text) {
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isProcessing) return;
   
-  const roots = [];
-  allTasks.forEach(t => {
-    if (t.parent_id && taskMap[t.parent_id]) {
-      taskMap[t.parent_id].children.push(taskMap[t.id]);
-    } else if (!t.parent_id) {
-      roots.push(taskMap[t.id]);
+  addUserMsg(text);
+  input.value = '';
+  isProcessing = true;
+  document.getElementById('sendBtn').disabled = true;
+  
+  showTyping();
+  
+  try {
+    // Try Anthropic API first if key is set
+    let response;
+    if (anthropicApiKey) {
+      response = await processWithAI(text);
+    } else {
+      response = await processLocal(text);
+    }
+    hideTyping();
+    addBotMsg(response);
+  } catch (e) {
+    hideTyping();
+    console.error('Chat error:', e);
+    addBotMsg('⚠️ Something went wrong. Try again.');
+  }
+  
+  isProcessing = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+// ================================================================
+// ANTHROPIC API INTEGRATION (optional)
+// ================================================================
+async function processWithAI(userMsg) {
+  const taskSummary = allTasks.slice(0, 50).map(t => {
+    const parentName = allTasks.find(p => p.id === t.parent_id)?.name || 'ROOT';
+    return `- ${t.name} [${t.status}] under "${parentName}"`;
+  }).join('\n');
+  
+  const tagSummary = allTags.map(t => `${t.name} (${t.type})`).join(', ');
+  
+  const systemPrompt = `You are TaskBrain, a personal AI task manager for ${chatMemory.user_name || 'the user'}.
+Current context: Location=${currentContext.location}, Mood=${currentContext.mood}, Time=${currentContext.timeSlot}, Hour=${new Date().getHours()}
+
+TASKS IN DATABASE:
+${taskSummary}
+
+AVAILABLE TAGS: ${tagSummary}
+
+You can respond with special JSON commands embedded in your response using this format:
+[CMD:ADD_TASK:{"name":"task name","parent":"parent task name","status":"not_started","tags":["tag1","tag2"]}]
+[CMD:UPDATE_STATUS:{"name":"task name","status":"done"}]
+[CMD:SET_CONTEXT:{"location":"Train"}] or [CMD:SET_CONTEXT:{"mood":"Tired"}]
+
+Keep responses concise and helpful. Use HTML for formatting (<strong>, <code>, etc). Be smart about organizing tasks into the existing hierarchy.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicApiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    
+    let response = data.content.map(c => c.text || '').join('');
+    
+    // Process embedded commands
+    const cmdRegex = /\[CMD:(\w+):(.*?)\]/g;
+    let match;
+    while ((match = cmdRegex.exec(response)) !== null) {
+      const [fullMatch, cmd, jsonStr] = match;
+      try {
+        const params = JSON.parse(jsonStr);
+        await executeCommand(cmd, params);
+      } catch(e) { console.error('CMD parse error:', e); }
+      response = response.replace(fullMatch, '');
+    }
+    
+    return response.trim() || 'Done! ✅';
+  } catch (e) {
+    console.warn('API fallback to local:', e.message);
+    return await processLocal(userMsg);
+  }
+}
+
+async function executeCommand(cmd, params) {
+  if (cmd === 'ADD_TASK') {
+    const parent = params.parent ? allTasks.find(t => t.name.toLowerCase() === params.parent.toLowerCase()) : null;
+    await createTask(params.name, parent?.id || null, params.status || 'not_started', params.tags || []);
+  } else if (cmd === 'UPDATE_STATUS') {
+    const task = allTasks.find(t => t.name.toLowerCase() === params.name.toLowerCase());
+    if (task) await updateTaskStatus(task.id, params.status);
+  } else if (cmd === 'SET_CONTEXT') {
+    if (params.location) { currentContext.location = params.location; updateContextDisplay(); setMemory('current_location', params.location); }
+    if (params.mood) { currentContext.mood = params.mood; updateContextDisplay(); setMemory('current_mood', params.mood); }
+  }
+}
+
+// ================================================================
+// LOCAL NLP ENGINE (no API key needed)
+// ================================================================
+async function processLocal(text) {
+  const lower = text.toLowerCase().trim();
+  
+  // --- CONTEXT UPDATES ---
+  const locMatch = lower.match(/(?:i'?m (?:at|on|in) (?:the )?|location[: ]+|at the )(\w[\w\s]*?)(?:\.|,|$|what|suggest)/i);
+  if (locMatch) {
+    const locName = locMatch[1].trim();
+    const loc = allTags.find(t => t.type === 'location' && t.name.toLowerCase().includes(locName));
+    if (loc) {
+      currentContext.location = loc.name;
+      updateContextDisplay();
+      await setMemory('current_location', loc.name);
+    }
+  }
+  
+  const moodMatch = lower.match(/(?:i'?m |i feel |feeling )(?:a bit |very |super )?(energetic|tired|sleepy|bit tired)/i);
+  if (moodMatch) {
+    const moodName = moodMatch[1];
+    const mood = MOOD_HIERARCHY.find(m => m.toLowerCase().includes(moodName));
+    if (mood) {
+      currentContext.mood = mood;
+      updateContextDisplay();
+      await setMemory('current_mood', mood);
+    }
+  }
+  
+  // --- BULK ADD: "I need to: X, Y, Z" ---
+  const bulkMatch = lower.match(/(?:i need to|tasks?|todo|to-?do|dump|add these)[:\s]+(.+)/i);
+  if (bulkMatch && (bulkMatch[1].includes(',') || bulkMatch[1].includes('\n'))) {
+    const items = bulkMatch[1].split(/[,\n]+/).map(s => s.trim()).filter(s => s.length > 1);
+    if (items.length > 0) {
+      return await handleBulkAdd(items);
+    }
+  }
+  
+  // --- ADD TASK: "add X under Y" ---
+  const addMatch = lower.match(/(?:add|create|new task)[:\s]+(.+?)(?:\s+under\s+(.+?))?(?:\s+with (?:tags?|priority)\s+(.+))?$/i);
+  if (addMatch) {
+    const name = addMatch[1].replace(/under\s+.*$/i, '').trim();
+    const parentName = addMatch[2]?.trim();
+    const tagsStr = addMatch[3]?.trim();
+    if (name.length > 1) {
+      return await handleAddTask(name, parentName, tagsStr);
+    }
+  }
+  
+  // --- MARK/UPDATE STATUS ---
+  const statusMatch = lower.match(/(?:mark|set|update|change)\s+(.+?)\s+(?:as|to|status)\s+(done|complete|in.?progress|started|blocked|not.?started)/i);
+  if (statusMatch) {
+    return await handleStatusUpdate(statusMatch[1], statusMatch[2]);
+  }
+  
+  // --- COMPLETE shorthand ---
+  const doneMatch = lower.match(/(?:done|finished|completed)[:\s]+(.+)/i);
+  if (doneMatch) {
+    return await handleStatusUpdate(doneMatch[1], 'done');
+  }
+  
+  // --- DELETE ---
+  const deleteMatch = lower.match(/(?:delete|remove|drop)\s+(?:task\s+)?(.+)/i);
+  if (deleteMatch) {
+    return await handleDelete(deleteMatch[1].trim());
+  }
+  
+  // --- WHAT SHOULD I DO / SUGGEST ---
+  if (lower.includes('what should') || lower.includes('suggest') || lower.includes('recommend') || lower.includes('what can i do') || lower.includes('pick a task') || lower.includes('what now')) {
+    return await suggestTasks();
+  }
+  
+  // --- PENDING / STATUS ---
+  if (lower.includes('pending') || lower.includes('status') || lower.includes('overview') || lower.includes('summary')) {
+    return getStatusSummary();
+  }
+  
+  // --- BLOCKED ---
+  if (lower.includes('blocked') || lower.includes('stuck')) {
+    return getBlockedTasks();
+  }
+  
+  // --- TREE VIEW ---
+  if (lower.includes('show tree') || lower.includes('show my tree') || lower.includes('task tree') || lower.includes('all tasks')) {
+    return getTreeSummary();
+  }
+  
+  // --- SEARCH ---
+  const searchMatch = lower.match(/(?:find|search|where is|show)\s+(?:tasks? (?:about|for|with|under|in)|)(.+)/i);
+  if (searchMatch && !lower.includes('tree') && !lower.includes('what')) {
+    return searchTasks(searchMatch[1].trim());
+  }
+  
+  // --- HABITS ---
+  if (lower.includes('habit') || lower.includes('pattern') || lower.includes('when do i') || lower.includes('my routine')) {
+    return getHabitInsights();
+  }
+  
+  // --- HELP ---
+  if (lower.includes('help') || lower.includes('command') || lower.includes('what can you')) {
+    return getHelp();
+  }
+  
+  // --- CONTEXT CHANGE ONLY (respond about what to do) ---
+  if (locMatch || moodMatch) {
+    return await suggestTasks();
+  }
+  
+  // --- FALLBACK: Try to interpret as task addition ---
+  if (lower.length > 3 && !lower.includes('?') && !lower.startsWith('hi') && !lower.startsWith('hey') && !lower.startsWith('hello')) {
+    return await handleSmartAdd(text);
+  }
+  
+  // --- GREETING ---
+  const name = chatMemory.user_name || 'there';
+  return `Hey ${esc(name)}! How can I help? Try:\n• <code>add [task] under [parent]</code>\n• <code>I need to: task1, task2, task3</code>\n• <code>What should I do now?</code>\n• <code>mark [task] as done</code>`;
+}
+
+// ================================================================
+// COMMAND HANDLERS
+// ================================================================
+async function handleBulkAdd(items) {
+  let results = [];
+  for (const item of items) {
+    try {
+      const { data } = await db.from('mind_map_app_tasks').insert({ name: item, status: 'not_started' }).select().single();
+      if (data) {
+        allTasks.push(data);
+        await logActivity(data.id, data.name, 'created');
+        results.push(`✅ ${esc(item)}`);
+      }
+    } catch (e) {
+      results.push(`❌ ${esc(item)} — ${e.message}`);
+    }
+  }
+  renderTree();
+  return `<strong>Added ${results.filter(r => r.startsWith('✅')).length} tasks:</strong>\n${results.join('\n')}\n\n💡 Tip: Use <code>add [task] under [parent]</code> to organize them into your tree.`;
+}
+
+async function handleAddTask(name, parentName, tagsStr) {
+  let parentId = null;
+  let parentInfo = '';
+  
+  if (parentName) {
+    const parent = allTasks.find(t => t.name.toLowerCase().includes(parentName.toLowerCase()));
+    if (parent) {
+      parentId = parent.id;
+      parentInfo = ` under <strong>${esc(parent.name)}</strong>`;
+    } else {
+      parentInfo = ` (couldn't find parent "${esc(parentName)}", added as root)`;
+    }
+  }
+  
+  return await createTask(name, parentId, 'not_started', tagsStr ? tagsStr.split(/[,\s]+/) : [], parentInfo);
+}
+
+async function createTask(name, parentId, status, tagNames = [], extraInfo = '') {
+  try {
+    const { data, error } = await db.from('mind_map_app_tasks').insert({
+      name, parent_id: parentId, status,
+      energy_required: 'medium'
+    }).select().single();
+    
+    if (error) throw error;
+    allTasks.push(data);
+    
+    // Assign tags
+    for (const tagName of tagNames) {
+      const tag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+      if (tag) {
+        await db.from('mind_map_app_task_tags').insert({ task_id: data.id, tag_id: tag.id });
+        if (!taskTagsMap[data.id]) taskTagsMap[data.id] = [];
+        taskTagsMap[data.id].push(tag.id);
+      }
+    }
+    
+    await logActivity(data.id, name, 'created');
+    renderTree();
+    
+    const parentName = parentId ? allTasks.find(t => t.id === parentId)?.name : null;
+    return `✅ Created <strong>${esc(name)}</strong>${extraInfo || (parentName ? ` under <strong>${esc(parentName)}</strong>` : ' (root task)')}\n\nPath: <code>${getTaskPath(data.id)}</code>`;
+  } catch (e) {
+    return `❌ Error creating task: ${e.message}`;
+  }
+}
+
+async function handleStatusUpdate(taskName, newStatus) {
+  const statusMap = {
+    'done': 'done', 'complete': 'done', 'completed': 'done',
+    'in progress': 'in_progress', 'inprogress': 'in_progress', 'in_progress': 'in_progress', 'started': 'in_progress',
+    'blocked': 'blocked',
+    'not started': 'not_started', 'notstarted': 'not_started', 'not_started': 'not_started'
+  };
+  
+  const status = statusMap[newStatus.replace(/[_\-]/g, ' ').toLowerCase()] || 'not_started';
+  const task = allTasks.find(t => t.name.toLowerCase().includes(taskName.toLowerCase()));
+  
+  if (!task) return `❓ Couldn't find a task matching "<strong>${esc(taskName)}</strong>". Try the exact name.`;
+  
+  return await updateTaskStatus(task.id, status);
+}
+
+async function updateTaskStatus(taskId, status) {
+  const task = allTasks.find(t => t.id === taskId);
+  if (!task) return '❓ Task not found.';
+  
+  const updates = { status };
+  if (status === 'done') {
+    updates.last_completed_at = new Date().toISOString();
+    updates.times_completed = (task.times_completed || 0) + 1;
+  }
+  
+  const { error } = await db.from('mind_map_app_tasks').update(updates).eq('id', taskId);
+  if (error) return `❌ Error: ${error.message}`;
+  
+  Object.assign(task, updates);
+  await logActivity(taskId, task.name, status === 'done' ? 'completed' : 'started');
+  renderTree();
+  
+  const icons = { done: '✅', in_progress: '🔄', blocked: '🚫', not_started: '⬜' };
+  return `${icons[status] || '✅'} <strong>${esc(task.name)}</strong> → ${status.replace('_', ' ')}\n\n<code>${getTaskPath(taskId)}</code>`;
+}
+
+async function handleDelete(taskName) {
+  const task = allTasks.find(t => t.name.toLowerCase().includes(taskName.toLowerCase()));
+  if (!task) return `❓ Couldn't find "${esc(taskName)}".`;
+  
+  const children = allTasks.filter(t => t.parent_id === task.id);
+  if (children.length > 0) {
+    return `⚠️ <strong>${esc(task.name)}</strong> has ${children.length} child tasks. Delete them first or say <code>delete ${esc(task.name)} and children</code>.`;
+  }
+  
+  const { error } = await db.from('mind_map_app_tasks').delete().eq('id', task.id);
+  if (error) return `❌ Error: ${error.message}`;
+  
+  allTasks = allTasks.filter(t => t.id !== task.id);
+  renderTree();
+  return `🗑️ Deleted <strong>${esc(task.name)}</strong>`;
+}
+
+async function handleSmartAdd(text) {
+  // Try to intelligently add as task
+  const clean = text.replace(/^(please |can you |could you )/i, '').trim();
+  if (clean.length < 3) return getHelp();
+  
+  // Check if it looks like a task
+  return await createTask(clean, null, 'not_started', [], '');
+}
+
+// ================================================================
+// SMART SUGGESTIONS
+// ================================================================
+async function suggestTasks() {
+  const now = new Date();
+  const hour = now.getHours();
+  const timeSlot = getTimeSlot();
+  const moodIdx = MOOD_HIERARCHY.indexOf(currentContext.mood);
+  
+  // Get leaf tasks (no children, not done)
+  let candidates = allTasks.filter(t => {
+    if (t.status === 'done' || t.status === 'blocked') return false;
+    return !allTasks.some(c => c.parent_id === t.id);
+  });
+  
+  // Score each candidate
+  const scored = candidates.map(task => {
+    let score = 50;
+    const tags = getAllTagsForTask(task.id);
+    const tagNames = tags.map(t => t.name.toLowerCase());
+    
+    // Location match
+    if (tagNames.includes(currentContext.location.toLowerCase()) || tagNames.includes('anywhere')) score += 25;
+    
+    // Mood/energy match
+    const taskMoods = tags.filter(t => t.type === 'mood');
+    if (taskMoods.length > 0) {
+      const taskBestMoodIdx = Math.min(...taskMoods.map(m => MOOD_HIERARCHY.indexOf(m.name)).filter(i => i >= 0));
+      if (taskBestMoodIdx <= moodIdx) score += 20;
+      else score -= 15;
+    }
+    
+    // Energy match
+    if (moodIdx <= 1 && task.energy_required === 'high') score += 10;
+    if (moodIdx >= 2 && task.energy_required === 'low') score += 15;
+    if (moodIdx >= 2 && task.energy_required === 'high') score -= 20;
+    
+    // Time preference match
+    if (task.preferred_time === timeSlot) score += 15;
+    
+    // Time slot tags
+    const timeSlotTag = tags.find(t => t.type === 'time_slot');
+    if (timeSlotTag && timeSlotTag.name.toLowerCase() === timeSlot) score += 15;
+    
+    // Priority boost
+    const priorityTag = tags.find(t => t.type === 'priority');
+    if (priorityTag) {
+      const pBoost = { 'Critical': 30, 'High': 20, 'Medium': 10, 'Low': 0, 'Someday': -10 };
+      score += (pBoost[priorityTag.name] || 0);
+    }
+    
+    // In-progress gets a boost (finish what you started)
+    if (task.status === 'in_progress') score += 15;
+    
+    // Due date urgency
+    if (task.due_date) {
+      const daysUntil = (new Date(task.due_date) - now) / (1000 * 60 * 60 * 24);
+      if (daysUntil < 1) score += 40;
+      else if (daysUntil < 3) score += 20;
+      else if (daysUntil < 7) score += 10;
+    }
+    
+    // Duration match - short tasks when tired
+    const durTag = tags.find(t => t.type === 'duration');
+    if (moodIdx >= 2 && durTag && ['5min', '15min'].includes(durTag.name)) score += 10;
+    
+    // Habit pattern: check if user usually does this type at this hour
+    const taskSubjects = tags.filter(t => t.type === 'subject').map(t => t.name);
+    const recentSameHour = activityLog.filter(a => a.hour_of_day === hour && a.action === 'completed');
+    // If similar tasks done at this hour before, boost
+    taskSubjects.forEach(subj => {
+      const matchCount = recentSameHour.filter(a => a.task_name.toLowerCase().includes(subj.toLowerCase())).length;
+      score += matchCount * 5;
+    });
+    
+    return { task, score, tags };
+  });
+  
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 5);
+  
+  if (top.length === 0) {
+    return `🎉 No actionable tasks right now! Use <code>add [task]</code> to create some.`;
+  }
+  
+  let html = `🧠 Based on your context (<strong>${currentContext.location}</strong>, <strong>${currentContext.mood}</strong>, <strong>${currentContext.timeSlot}</strong>):\n\n`;
+  
+  top.forEach((item, i) => {
+    const t = item.task;
+    const tagHtml = item.tags.slice(0, 3).map(tg => `<span class="tag-inline" style="background:${tg.color}22;color:${tg.color}">${tg.name}</span>`).join('');
+    const statusIcon = t.status === 'in_progress' ? '🔄 ' : '';
+    const path = getTaskPath(t.id);
+    
+    html += `<div class="task-card-inline"><div class="task-name">${i === 0 ? '⭐ ' : ''}${statusIcon}${esc(t.name)}</div><div class="task-meta">${path}</div><div>${tagHtml}</div></div>`;
+  });
+  
+  html += `\n💡 Say <code>mark [task] as done</code> when finished, or <code>mark [task] as in progress</code> to start.`;
+  return html;
+}
+
+// ================================================================
+// STATUS & INSIGHTS
+// ================================================================
+function getStatusSummary() {
+  const total = allTasks.length;
+  const done = allTasks.filter(t => t.status === 'done').length;
+  const progress = allTasks.filter(t => t.status === 'in_progress').length;
+  const blocked = allTasks.filter(t => t.status === 'blocked').length;
+  const notStarted = allTasks.filter(t => t.status === 'not_started').length;
+  const leaves = allTasks.filter(t => !allTasks.some(c => c.parent_id === t.id) && t.status !== 'done').length;
+  
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  
+  return `📊 <strong>Task Overview</strong>\n\nTotal: <strong>${total}</strong> tasks · Completion: <strong>${pct}%</strong>\n\n✅ Done: ${done}\n🔄 In Progress: ${progress}\n⬜ Not Started: ${notStarted}\n🚫 Blocked: ${blocked}\n\n🎯 <strong>${leaves}</strong> actionable leaf tasks remaining`;
+}
+
+function getBlockedTasks() {
+  const blocked = allTasks.filter(t => t.status === 'blocked');
+  if (blocked.length === 0) return '✅ No blocked tasks!';
+  
+  let html = `🚫 <strong>${blocked.length} Blocked Tasks:</strong>\n\n`;
+  blocked.forEach(t => {
+    html += `<div class="task-card-inline"><div class="task-name">🚫 ${esc(t.name)}</div><div class="task-meta">${getTaskPath(t.id)}</div>${t.notes ? `<div style="color:var(--text-secondary);font-size:0.8rem;margin-top:4px;">📝 ${esc(t.notes)}</div>` : ''}</div>`;
+  });
+  return html;
+}
+
+function getTreeSummary() {
+  const roots = allTasks.filter(t => !t.parent_id);
+  
+  function renderBranch(task, depth = 0) {
+    const indent = '&nbsp;&nbsp;'.repeat(depth);
+    const icon = task.status === 'done' ? '✅' : task.status === 'in_progress' ? '🔄' : task.status === 'blocked' ? '🚫' : '○';
+    const children = allTasks.filter(t => t.parent_id === task.id);
+    let html = `${indent}${icon} ${esc(task.name)}\n`;
+    children.forEach(c => { html += renderBranch(c, depth + 1); });
+    return html;
+  }
+  
+  let html = '🌳 <strong>Task Tree:</strong>\n\n';
+  roots.forEach(r => { html += renderBranch(r); });
+  html += `\n💡 Switch to the tree view (🌳) for full controls.`;
+  return html;
+}
+
+function searchTasks(query) {
+  const matches = allTasks.filter(t => t.name.toLowerCase().includes(query.toLowerCase()));
+  
+  // Also search by tag
+  const tagMatches = allTags.filter(t => t.name.toLowerCase().includes(query.toLowerCase()));
+  if (tagMatches.length > 0) {
+    tagMatches.forEach(tag => {
+      allTasks.forEach(task => {
+        const tags = getAllTagsForTask(task.id);
+        if (tags.some(t => t.id === tag.id) && !matches.includes(task)) {
+          matches.push(task);
+        }
+      });
+    });
+  }
+  
+  if (matches.length === 0) return `🔍 No tasks found matching "<strong>${esc(query)}</strong>"`;
+  
+  let html = `🔍 Found <strong>${matches.length}</strong> tasks matching "${esc(query)}":\n\n`;
+  matches.slice(0, 10).forEach(t => {
+    const icon = t.status === 'done' ? '✅' : t.status === 'in_progress' ? '🔄' : '○';
+    html += `${icon} <strong>${esc(t.name)}</strong> <code>${getTaskPath(t.id)}</code>\n`;
+  });
+  if (matches.length > 10) html += `\n...and ${matches.length - 10} more`;
+  return html;
+}
+
+function getHabitInsights() {
+  const completed = activityLog.filter(a => a.action === 'completed');
+  if (completed.length < 3) return '📊 Not enough data yet. Keep completing tasks and I\'ll learn your patterns!';
+  
+  // Most productive hours
+  const hourCounts = {};
+  completed.forEach(a => { hourCounts[a.hour_of_day] = (hourCounts[a.hour_of_day] || 0) + 1; });
+  const topHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  
+  // Most productive days
+  const dayCounts = {};
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  completed.forEach(a => { dayCounts[a.day_of_week] = (dayCounts[a.day_of_week] || 0) + 1; });
+  const topDays = Object.entries(dayCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  
+  // Location patterns
+  const locCounts = {};
+  completed.forEach(a => {
+    if (a.location_tag_id) {
+      const tag = allTags.find(t => t.id === a.location_tag_id);
+      if (tag) locCounts[tag.name] = (locCounts[tag.name] || 0) + 1;
     }
   });
   
+  let html = `📊 <strong>Your Habit Patterns</strong>\n(based on ${completed.length} completed tasks)\n\n`;
+  
+  html += `⏰ <strong>Most Productive Hours:</strong>\n`;
+  topHours.forEach(([h, c]) => { html += `&nbsp;&nbsp;${h}:00 — ${c} tasks\n`; });
+  
+  html += `\n📅 <strong>Most Productive Days:</strong>\n`;
+  topDays.forEach(([d, c]) => { html += `&nbsp;&nbsp;${dayNames[d]} — ${c} tasks\n`; });
+  
+  if (Object.keys(locCounts).length > 0) {
+    html += `\n📍 <strong>Where You Work:</strong>\n`;
+    Object.entries(locCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).forEach(([loc, c]) => {
+      html += `&nbsp;&nbsp;${loc} — ${c} tasks\n`;
+    });
+  }
+  
+  html += `\n💡 Switch to the habits tab (📊) for visual charts.`;
+  return html;
+}
+
+function getHelp() {
+  return `🧠 <strong>TaskBrain Commands</strong>\n
+<strong>Add tasks:</strong>
+<code>add [task name]</code> — add a root task
+<code>add [task] under [parent]</code> — add nested
+<code>I need to: X, Y, Z</code> — bulk add
+
+<strong>Update:</strong>
+<code>mark [task] as done</code>
+<code>mark [task] as in progress</code>
+<code>done: [task name]</code>
+<code>delete [task name]</code>
+
+<strong>Context:</strong>
+<code>I'm on the train</code> — set location
+<code>I'm tired</code> — set mood
+Click the pills above to cycle ↑
+
+<strong>Query:</strong>
+<code>What should I do now?</code>
+<code>What's pending?</code>
+<code>Show my tree</code>
+<code>Find [keyword]</code>
+<code>My habits</code>
+
+<strong>Tip:</strong> Just type naturally! I'll figure it out 🧠`;
+}
+
+// ================================================================
+// TREE RENDERING
+// ================================================================
+function buildTree() {
+  const map = {};
+  allTasks.forEach(t => { map[t.id] = { ...t, children: [] }; });
+  const roots = [];
+  allTasks.forEach(t => {
+    if (t.parent_id && map[t.parent_id]) map[t.parent_id].children.push(map[t.id]);
+    else if (!t.parent_id) roots.push(map[t.id]);
+  });
   return roots;
-}
-
-function filterTree(nodes, focusedTagIds) {
-  if (focusedTagIds.length === 0) return nodes;
-  
-  function hasMatchingDescendant(node) {
-    const nodeTags = getAllTagsForTask(node.id).map(t => t.id);
-    if (focusedTagIds.some(fid => nodeTags.includes(fid))) return true;
-    return node.children.some(c => hasMatchingDescendant(c));
-  }
-  
-  function filterNode(node) {
-    const nodeTags = getAllTagsForTask(node.id).map(t => t.id);
-    const matches = focusedTagIds.some(fid => nodeTags.includes(fid));
-    const filteredChildren = node.children.map(c => filterNode(c)).filter(c => c !== null);
-    
-    if (matches || filteredChildren.length > 0) {
-      return { ...node, children: filteredChildren, isMatch: matches };
-    }
-    return null;
-  }
-  
-  return nodes.map(n => filterNode(n)).filter(n => n !== null);
-}
-
-// ==================================================
-// RENDERING
-// ==================================================
-function renderFilters() {
-  const container = document.getElementById('filterSection');
-  const types = [...new Set(allTags.map(t => t.type))].sort();
-  
-  container.innerHTML = types.map(type => `
-    <div class="filter-group">
-      <label>${capitalize(type)}</label>
-      <select onchange="applyFilter('${type}', this.value)">
-        <option value="">All</option>
-        ${allTags.filter(t => t.type === type).map(t => 
-          `<option value="${t.id}">${t.name}</option>`
-        ).join('')}
-      </select>
-    </div>
-  `).join('');
-}
-
-function applyFilter(type, tagId) {
-  if (tagId) {
-    currentFilters[type] = tagId;
-  } else {
-    delete currentFilters[type];
-  }
-  renderTree();
 }
 
 function renderTree() {
   const container = document.getElementById('treeContainer');
-  let tree = buildTree();
-  
-  // Apply focus filter
-  const focusedTagIds = allTags.filter(t => t.is_focused).map(t => t.id);
-  if (focusedTagIds.length > 0) {
-    tree = filterTree(tree, focusedTagIds);
-  }
-  
-  // Apply dropdown filters
-  const filterTagIds = Object.values(currentFilters);
-  if (filterTagIds.length > 0) {
-    tree = filterTree(tree, filterTagIds);
-  }
+  const tree = buildTree();
   
   if (tree.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📭</div>
-        <h3>No tasks found</h3>
-        <p>Try adjusting filters or add a new task</p>
-      </div>
-    `;
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><p style="font-size:2rem;margin-bottom:12px">🌱</p><p>No tasks yet. Start chatting to add some!</p></div>';
     return;
   }
   
-  container.innerHTML = tree.map(node => renderTreeNode(node, 0)).join('');
+  container.innerHTML = tree.map(n => renderTreeNode(n)).join('');
 }
 
-function renderTreeNode(node, depth) {
-  const hasChildren = node.children && node.children.length > 0;
-  const isCollapsed = collapsedNodes.has(node.id);
+function renderTreeNode(node) {
+  const hasKids = node.children.length > 0;
+  const isCol = collapsedNodes.has(node.id);
   const tags = getAllTagsForTask(node.id);
-  const statusClass = `status-${node.status || 'not_started'}`;
-  const focusedTagIds = allTags.filter(t => t.is_focused).map(t => t.id);
-  const isFocused = tags.some(t => focusedTagIds.includes(t.id));
+  const isDone = node.status === 'done';
   
-  const nodeClasses = [
-    'tree-node-content',
-    node.status === 'done' ? 'done' : '',
-    node.status === 'blocked' ? 'blocked' : '',
-    isFocused ? 'focused' : ''
-  ].filter(Boolean).join(' ');
-  
-  return `
-    <div class="tree-node">
-      <div class="${nodeClasses}">
-        <div class="tree-toggle ${hasChildren ? '' : 'empty'}" onclick="toggleNode('${node.id}')">
-          ${hasChildren ? (isCollapsed ? '+' : '−') : ''}
-        </div>
-        <div class="tree-node-info">
-          <div class="tree-node-name">
-            ${escapeHtml(node.name)}
-            <span class="status-badge ${statusClass}">${capitalize((node.status || 'not_started').replace('_', ' '))}</span>
-          </div>
-          ${node.links ? `<a href="${node.links}" target="_blank" style="font-size: 0.8rem; color: #667eea;">🔗 Link</a>` : ''}
-          <div class="tree-node-tags">
-            ${tags.map(t => `
-              <span class="tag ${t.inherited ? 'inherited' : ''}" style="background: ${t.color}20; color: ${t.color}">
-                ${t.name}${t.inherited ? ' ↑' : ''}
-              </span>
-            `).join('')}
-          </div>
-        </div>
-        <div class="tree-node-actions">
-          <button class="btn btn-xs btn-secondary" onclick="openTaskModal('${node.id}')">✏️</button>
-          <button class="btn btn-xs btn-success" onclick="addChildTask('${node.id}')">+</button>
-          <button class="btn btn-xs btn-danger" onclick="deleteTask('${node.id}')">🗑️</button>
-        </div>
+  return `<div class="tree-node">
+    <div class="tree-node-row">
+      <button class="tree-toggle ${hasKids ? '' : 'leaf'}" onclick="toggleTreeNode('${node.id}')">${hasKids ? (isCol ? '▸' : '▾') : '·'}</button>
+      <div class="tree-status ${node.status || 'not_started'}"></div>
+      <span class="tree-name ${isDone ? 'done' : ''}">${esc(node.name)}</span>
+      <div class="tree-tags-mini">
+        ${tags.slice(0, 4).map(t => `<div class="tag-dot" style="background:${t.color}" title="${t.name}"></div>`).join('')}
       </div>
-      ${hasChildren ? `
-        <div class="tree-children ${isCollapsed ? 'collapsed' : ''}">
-          ${node.children.map(c => renderTreeNode(c, depth + 1)).join('')}
-        </div>
-      ` : ''}
+      <div class="tree-actions">
+        <button class="tree-action-btn" onclick="openTaskModal('${node.id}')" title="Edit">✏</button>
+        <button class="tree-action-btn" onclick="addChildFromTree('${node.id}')" title="Add child">+</button>
+        <button class="tree-action-btn" onclick="quickToggleStatus('${node.id}')" title="Toggle status">◎</button>
+        <button class="tree-action-btn danger" onclick="deleteFromTree('${node.id}')" title="Delete">✕</button>
+      </div>
+    </div>
+    ${hasKids ? `<div class="tree-children ${isCol ? 'collapsed' : ''}">${node.children.map(c => renderTreeNode(c)).join('')}</div>` : ''}
+  </div>`;
+}
+
+function toggleTreeNode(id) {
+  if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
+  renderTree();
+}
+
+function expandAll() { collapsedNodes.clear(); renderTree(); }
+
+function collapseAll() {
+  allTasks.forEach(t => { if (allTasks.some(c => c.parent_id === t.id)) collapsedNodes.add(t.id); });
+  renderTree();
+}
+
+async function quickToggleStatus(id) {
+  const task = allTasks.find(t => t.id === id);
+  if (!task) return;
+  const cycle = { 'not_started': 'in_progress', 'in_progress': 'done', 'done': 'not_started', 'blocked': 'not_started', 'someday': 'not_started' };
+  const newStatus = cycle[task.status] || 'not_started';
+  await updateTaskStatus(id, newStatus);
+  showToast(`${task.name} → ${newStatus.replace('_', ' ')}`);
+}
+
+async function addChildFromTree(parentId) {
+  const name = prompt('Task name:');
+  if (!name?.trim()) return;
+  await createTask(name.trim(), parentId, 'not_started');
+  showToast(`Added under ${allTasks.find(t => t.id === parentId)?.name}`);
+}
+
+async function deleteFromTree(id) {
+  const task = allTasks.find(t => t.id === id);
+  if (!task) return;
+  if (!confirm(`Delete "${task.name}"?`)) return;
+  await db.from('mind_map_app_tasks').delete().eq('id', id);
+  allTasks = allTasks.filter(t => t.id !== id);
+  renderTree();
+  showToast(`Deleted ${task.name}`);
+}
+
+// ================================================================
+// HABITS RENDERING
+// ================================================================
+function renderHabits() {
+  const container = document.getElementById('habitsContainer');
+  const completed = activityLog.filter(a => a.action === 'completed');
+  const created = activityLog.filter(a => a.action === 'created');
+  
+  const totalDone = allTasks.filter(t => t.status === 'done').length;
+  const totalPending = allTasks.filter(t => t.status !== 'done').length;
+  const streak = calculateStreak();
+  
+  // Hourly distribution
+  const hourCounts = new Array(24).fill(0);
+  completed.forEach(a => { if (a.hour_of_day != null) hourCounts[a.hour_of_day]++; });
+  const maxHour = Math.max(...hourCounts, 1);
+  
+  // Day distribution
+  const dayCounts = new Array(7).fill(0);
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  completed.forEach(a => { if (a.day_of_week != null) dayCounts[a.day_of_week]++; });
+  const maxDay = Math.max(...dayCounts, 1);
+  
+  container.innerHTML = `
+    <div class="stat-card">
+      <h3>Tasks Completed</h3>
+      <div class="stat-value" style="color:var(--green)">${totalDone}</div>
+      <div class="stat-sub">${totalPending} remaining</div>
+    </div>
+    
+    <div class="stat-card">
+      <h3>Activity (Last 30 entries)</h3>
+      <div class="stat-value">${completed.length}</div>
+      <div class="stat-sub">completions logged</div>
+    </div>
+    
+    <div class="stat-card">
+      <h3>Streak</h3>
+      <div class="stat-value" style="color:var(--orange)">${streak}d</div>
+      <div class="stat-sub">consecutive days active</div>
+    </div>
+    
+    <div class="stat-card" style="grid-column: span 2;">
+      <h3>Productivity by Hour</h3>
+      <div class="bar-chart">
+        ${hourCounts.map((c, h) => `<div class="bar-item"><div class="bar" style="height:${(c/maxHour)*100}%;${c > 0 ? 'background:var(--accent);' : ''}"></div><div class="bar-label">${h}</div></div>`).join('')}
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <h3>Productivity by Day</h3>
+      <div class="bar-chart">
+        ${dayCounts.map((c, d) => `<div class="bar-item"><div class="bar" style="height:${(c/maxDay)*100}%;${c > 0 ? 'background:var(--purple);' : ''}"></div><div class="bar-label">${dayNames[d]}</div></div>`).join('')}
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <h3>Top Locations</h3>
+      ${getLocationStats(completed)}
     </div>
   `;
 }
 
-function toggleNode(id) {
-  if (collapsedNodes.has(id)) {
-    collapsedNodes.delete(id);
-  } else {
-    collapsedNodes.add(id);
+function calculateStreak() {
+  const dates = new Set();
+  activityLog.forEach(a => {
+    if (a.created_at) dates.add(new Date(a.created_at).toDateString());
+  });
+  let streak = 0;
+  let d = new Date();
+  while (dates.has(d.toDateString())) {
+    streak++;
+    d.setDate(d.getDate() - 1);
   }
-  renderTree();
+  return streak;
 }
 
-function expandAllNodes() {
-  collapsedNodes.clear();
-  renderTree();
-}
-
-function collapseAllNodes() {
-  allTasks.forEach(t => {
-    if (allTasks.some(c => c.parent_id === t.id)) {
-      collapsedNodes.add(t.id);
+function getLocationStats(completed) {
+  const locCounts = {};
+  completed.forEach(a => {
+    if (a.location_tag_id) {
+      const tag = allTags.find(t => t.id === a.location_tag_id);
+      if (tag) locCounts[tag.name] = (locCounts[tag.name] || 0) + 1;
     }
   });
-  renderTree();
+  
+  const sorted = Object.entries(locCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (sorted.length === 0) return '<div class="stat-sub">No location data yet</div>';
+  
+  return sorted.map(([name, count]) => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.85rem"><span>${name}</span><span style="font-family:var(--font-mono);color:var(--text-muted)">${count}</span></div>`).join('');
 }
 
-function renderTagsGrid() {
+async function refreshHabits() {
+  await loadActivityLog();
+  renderHabits();
+  showToast('Habits refreshed');
+}
+
+// ================================================================
+// TAGS RENDERING
+// ================================================================
+function renderTags() {
   const container = document.getElementById('tagsContainer');
   const types = [...new Set(allTags.map(t => t.type))].sort();
   
-  if (allTags.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏷️</div><h3>No tags yet</h3></div>`;
-    return;
-  }
-  
   container.innerHTML = types.map(type => `
-    <h4 style="margin: 20px 0 10px; color: #666; text-transform: uppercase; font-size: 0.85rem;">${type}</h4>
-    <div class="tags-grid">
-      ${allTags.filter(t => t.type === type).map(tag => `
-        <div class="tag-card">
-          <div class="tag-color" style="background: ${tag.color}"></div>
-          <div class="tag-info">
-            <div class="tag-name">${escapeHtml(tag.name)}</div>
-            <div class="tag-type-label">${tag.is_focused ? '⭐ Focused' : ''}</div>
-          </div>
-          <div class="tag-actions">
-            <button class="btn btn-xs ${tag.is_focused ? 'btn-success' : 'btn-secondary'}" onclick="toggleFocus('${tag.id}')">${tag.is_focused ? '⭐' : '☆'}</button>
-            <button class="btn btn-xs btn-secondary" onclick="editTag('${tag.id}')">✏️</button>
-            <button class="btn btn-xs btn-danger" onclick="deleteTag('${tag.id}')">🗑️</button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
-}
-
-function renderTaskTagSelector() {
-  const container = document.getElementById('taskTagSelector');
-  const types = [...new Set(allTags.map(t => t.type))].sort();
-  
-  container.innerHTML = types.map(type => `
-    <div class="tag-type-group">
+    <div class="tag-type-section">
       <div class="tag-type-title">${type}</div>
-      <div class="tag-options">
-        ${allTags.filter(t => t.type === type).map(t => `
-          <span class="tag-option ${selectedTagIds.has(t.id) ? 'selected' : ''}"
-                style="background: ${t.color}20; color: ${t.color}"
-                onclick="toggleTaskTag('${t.id}')">
-            ${t.name}
+      <div class="tag-list">
+        ${allTags.filter(t => t.type === type).map(tag => `
+          <span class="tag-pill ${tag.is_focused ? 'focused' : ''}" 
+                style="background:${tag.color}22;color:${tag.color}"
+                onclick="toggleTagFocus('${tag.id}')"
+                title="Click to ${tag.is_focused ? 'unfocus' : 'focus'}">
+            ${tag.is_focused ? '⭐ ' : ''}${tag.name}
           </span>
         `).join('')}
       </div>
@@ -1137,573 +2034,220 @@ function renderTaskTagSelector() {
   `).join('');
 }
 
-function renderParentSelect(excludeId = null) {
-  const select = document.getElementById('taskParent');
-  select.innerHTML = '<option value="">None (Root Task)</option>';
-  
-  function addOptions(tasks, depth = 0) {
-    tasks.forEach(t => {
-      if (t.id !== excludeId) {
-        const option = document.createElement('option');
-        option.value = t.id;
-        option.textContent = '  '.repeat(depth) + t.name;
-        select.appendChild(option);
-      }
-      const children = allTasks.filter(c => c.parent_id === t.id);
-      if (children.length > 0) addOptions(children, depth + 1);
-    });
-  }
-  
-  const roots = allTasks.filter(t => !t.parent_id);
-  addOptions(roots);
-}
-
-// ==================================================
-// FOCUS SYSTEM
-// ==================================================
-async function toggleFocus(tagId) {
+async function toggleTagFocus(tagId) {
   const tag = allTags.find(t => t.id === tagId);
   if (!tag) return;
-  
-  const { error } = await db.from('tags').update({ is_focused: !tag.is_focused }).eq('id', tagId);
-  if (error) { showToast('Error updating focus', 'error'); return; }
-  
-  await loadTags();
-  renderTagsGrid();
-  renderTree();
-  updateFocusBanner();
-  updateQuickActions();
-  showToast(tag.is_focused ? `Removed focus from ${tag.name}` : `Focused on ${tag.name}`, 'success');
+  await db.from('mind_map_app_tags').update({ is_focused: !tag.is_focused }).eq('id', tagId);
+  tag.is_focused = !tag.is_focused;
+  renderTags();
+  showToast(tag.is_focused ? `⭐ Focused on ${tag.name}` : `Unfocused ${tag.name}`);
 }
 
-async function clearAllFocus() {
-  const { error } = await db.from('tags').update({ is_focused: false }).eq('is_focused', true);
-  if (error) { showToast('Error clearing focus', 'error'); return; }
+// ================================================================
+// TASK MODAL
+// ================================================================
+function openTaskModal(editId = null) {
+  document.getElementById('taskModal').classList.add('active');
+  document.getElementById('editTaskId').value = editId || '';
+  document.getElementById('taskModalTitle').textContent = editId ? 'Edit Task' : 'New Task';
   
-  await loadTags();
-  renderTagsGrid();
-  renderTree();
-  updateFocusBanner();
-  updateQuickActions();
-  showToast('Focus cleared', 'success');
-}
-
-function updateFocusBanner() {
-  const focused = allTags.filter(t => t.is_focused);
-  const banner = document.getElementById('focusBanner');
-  const tagsContainer = document.getElementById('focusTags');
-  
-  if (focused.length === 0) {
-    banner.classList.remove('active');
-    return;
+  // Populate parent select
+  const select = document.getElementById('fTaskParent');
+  select.innerHTML = '<option value="">Root (No parent)</option>';
+  function addOpts(tasks, depth = 0) {
+    tasks.forEach(t => {
+      if (t.id !== editId) {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = '  '.repeat(depth) + t.name;
+        select.appendChild(opt);
+      }
+      addOpts(allTasks.filter(c => c.parent_id === t.id), depth + 1);
+    });
   }
+  addOpts(allTasks.filter(t => !t.parent_id));
   
-  banner.classList.add('active');
-  tagsContainer.innerHTML = focused.map(t => `
-    <span class="focus-tag" style="background: ${t.color}40;">
+  // Populate tag selector
+  const tagContainer = document.getElementById('fTaskTags');
+  selectedTagIds = new Set();
+  tagContainer.innerHTML = allTags.map(t => `
+    <span class="tag-opt" style="background:${t.color}22;color:${t.color}" data-id="${t.id}" onclick="toggleModalTag('${t.id}')">
       ${t.name}
-      <span class="remove-focus" onclick="toggleFocus('${t.id}')">&times;</span>
     </span>
   `).join('');
-}
-
-// ==================================================
-// TASK CRUD
-// ==================================================
-function openTaskModal(taskId = null) {
-  document.getElementById('taskModal').classList.add('active');
-  document.getElementById('taskModalTitle').textContent = taskId ? 'Edit Task' : 'New Task';
   
-  document.getElementById('taskId').value = '';
-  document.getElementById('taskName').value = '';
-  document.getElementById('taskParent').value = '';
-  document.getElementById('taskStatus').value = 'not_started';
-  document.getElementById('taskNotes').value = '';
-  document.getElementById('taskLinks').value = '';
-  selectedTagIds.clear();
-  
-  renderParentSelect(taskId);
-  
-  if (taskId) {
-    const task = allTasks.find(t => t.id === taskId);
+  if (editId) {
+    const task = allTasks.find(t => t.id === editId);
     if (task) {
-      document.getElementById('taskId').value = task.id;
-      document.getElementById('taskName').value = task.name;
-      document.getElementById('taskParent').value = task.parent_id || '';
-      document.getElementById('taskStatus').value = task.status || 'not_started';
-      document.getElementById('taskNotes').value = task.notes || '';
-      document.getElementById('taskLinks').value = task.links || '';
-      selectedTagIds = new Set(taskTagsMap[task.id] || []);
+      document.getElementById('fTaskName').value = task.name;
+      document.getElementById('fTaskParent').value = task.parent_id || '';
+      document.getElementById('fTaskStatus').value = task.status;
+      document.getElementById('fTaskEnergy').value = task.energy_required || 'medium';
+      document.getElementById('fTaskTime').value = task.preferred_time || '';
+      document.getElementById('fTaskMinutes').value = task.estimated_minutes || '';
+      document.getElementById('fTaskNotes').value = task.notes || '';
+      document.getElementById('fTaskLink').value = task.links || '';
+      
+      (taskTagsMap[editId] || []).forEach(tid => {
+        selectedTagIds.add(tid);
+        document.querySelector(`.tag-opt[data-id="${tid}"]`)?.classList.add('selected');
+      });
     }
-  }
-  
-  renderTaskTagSelector();
-}
-
-function closeTaskModal() {
-  document.getElementById('taskModal').classList.remove('active');
-}
-
-function addChildTask(parentId) {
-  openTaskModal();
-  document.getElementById('taskParent').value = parentId;
-}
-
-function toggleTaskTag(tagId) {
-  if (selectedTagIds.has(tagId)) {
-    selectedTagIds.delete(tagId);
   } else {
-    selectedTagIds.add(tagId);
+    document.getElementById('fTaskName').value = '';
+    document.getElementById('fTaskStatus').value = 'not_started';
+    document.getElementById('fTaskEnergy').value = 'medium';
+    document.getElementById('fTaskTime').value = '';
+    document.getElementById('fTaskMinutes').value = '';
+    document.getElementById('fTaskNotes').value = '';
+    document.getElementById('fTaskLink').value = '';
   }
-  renderTaskTagSelector();
+}
+
+function closeTaskModal() { document.getElementById('taskModal').classList.remove('active'); }
+
+function toggleModalTag(id) {
+  if (selectedTagIds.has(id)) { selectedTagIds.delete(id); } else { selectedTagIds.add(id); }
+  document.querySelector(`.tag-opt[data-id="${id}"]`)?.classList.toggle('selected');
 }
 
 async function saveTask() {
-  const taskId = document.getElementById('taskId').value;
-  const name = document.getElementById('taskName').value.trim();
-  const parent_id = document.getElementById('taskParent').value || null;
-  const status = document.getElementById('taskStatus').value;
-  const notes = document.getElementById('taskNotes').value.trim();
-  const links = document.getElementById('taskLinks').value.trim();
+  const editId = document.getElementById('editTaskId').value;
+  const name = document.getElementById('fTaskName').value.trim();
+  if (!name) { showToast('Name required', 'error'); return; }
   
-  if (!name) { showToast('Task name is required', 'error'); return; }
+  const taskData = {
+    name,
+    parent_id: document.getElementById('fTaskParent').value || null,
+    status: document.getElementById('fTaskStatus').value,
+    energy_required: document.getElementById('fTaskEnergy').value,
+    preferred_time: document.getElementById('fTaskTime').value || null,
+    estimated_minutes: parseInt(document.getElementById('fTaskMinutes').value) || null,
+    notes: document.getElementById('fTaskNotes').value || null,
+    links: document.getElementById('fTaskLink').value || null
+  };
   
   try {
-    let savedId = taskId;
-    
-    if (taskId) {
-      const { error } = await db.from('tasks').update({ name, parent_id, status, notes, links }).eq('id', taskId);
-      if (error) throw error;
-      await db.from('task_tags').delete().eq('task_id', taskId);
+    if (editId) {
+      await db.from('mind_map_app_tasks').update(taskData).eq('id', editId);
+      Object.assign(allTasks.find(t => t.id === editId), taskData);
+      
+      // Update tags
+      await db.from('mind_map_app_task_tags').delete().eq('task_id', editId);
+      taskTagsMap[editId] = [];
+      for (const tagId of selectedTagIds) {
+        await db.from('mind_map_app_task_tags').insert({ task_id: editId, tag_id: tagId });
+        taskTagsMap[editId].push(tagId);
+      }
     } else {
-      const { data, error } = await db.from('tasks').insert({ name, parent_id, status, notes, links }).select().single();
-      if (error) throw error;
-      savedId = data.id;
+      const { data } = await db.from('mind_map_app_tasks').insert(taskData).select().single();
+      allTasks.push(data);
+      
+      taskTagsMap[data.id] = [];
+      for (const tagId of selectedTagIds) {
+        await db.from('mind_map_app_task_tags').insert({ task_id: data.id, tag_id: tagId });
+        taskTagsMap[data.id].push(tagId);
+      }
+      await logActivity(data.id, name, 'created');
     }
     
-    if (selectedTagIds.size > 0) {
-      const tagLinks = Array.from(selectedTagIds).map(tid => ({ task_id: savedId, tag_id: tid }));
-      const { error } = await db.from('task_tags').insert(tagLinks);
-      if (error) throw error;
-    }
-    
+    renderTree();
     closeTaskModal();
-    showToast(taskId ? 'Task updated!' : 'Task created!', 'success');
-    await loadTasks();
-    await loadTaskTags();
-    renderTree();
-  } catch (err) {
-    console.error(err);
-    showToast('Error saving task', 'error');
+    showToast(editId ? 'Task updated' : 'Task created');
+  } catch (e) {
+    showToast(`Error: ${e.message}`, 'error');
   }
 }
 
-function deleteTask(taskId) {
-  const task = allTasks.find(t => t.id === taskId);
-  const childCount = allTasks.filter(t => t.parent_id === taskId).length;
-  
-  document.getElementById('deleteMessage').textContent = childCount > 0
-    ? `Delete "${task?.name}"? This will also delete ${childCount} child task(s).`
-    : `Delete "${task?.name}"?`;
-  document.getElementById('deleteModal').classList.add('active');
-  
-  deleteCallback = async () => {
-    const { error } = await db.from('tasks').delete().eq('id', taskId);
-    if (error) { showToast('Error deleting task', 'error'); return; }
-    showToast('Task deleted!', 'success');
-    await loadTasks();
-    await loadTaskTags();
-    renderTree();
-  };
-}
-
-// ==================================================
-// TAG CRUD
-// ==================================================
-function openTagModal(tagId = null) {
-  document.getElementById('tagModal').classList.add('active');
-  document.getElementById('tagModalTitle').textContent = tagId ? 'Edit Tag' : 'New Tag';
-  
-  document.getElementById('tagId').value = '';
-  document.getElementById('tagName').value = '';
-  document.getElementById('tagType').value = 'category';
-  document.getElementById('tagColor').value = '#667eea';
-  
-  if (tagId) {
-    const tag = allTags.find(t => t.id === tagId);
-    if (tag) {
-      document.getElementById('tagId').value = tag.id;
-      document.getElementById('tagName').value = tag.name;
-      document.getElementById('tagType').value = tag.type;
-      document.getElementById('tagColor').value = tag.color;
-    }
-  }
-}
-
-function closeTagModal() {
-  document.getElementById('tagModal').classList.remove('active');
-}
-
-function editTag(tagId) {
-  openTagModal(tagId);
-}
+// ================================================================
+// TAG MODAL
+// ================================================================
+function openTagModal() { document.getElementById('tagModal').classList.add('active'); }
+function closeTagModal() { document.getElementById('tagModal').classList.remove('active'); }
 
 async function saveTag() {
-  const tagId = document.getElementById('tagId').value;
-  const name = document.getElementById('tagName').value.trim();
-  const type = document.getElementById('tagType').value;
-  const color = document.getElementById('tagColor').value;
-  
-  if (!name) { showToast('Tag name is required', 'error'); return; }
+  const name = document.getElementById('fTagName').value.trim();
+  const type = document.getElementById('fTagType').value;
+  const color = document.getElementById('fTagColor').value;
+  if (!name) { showToast('Name required', 'error'); return; }
   
   try {
-    if (tagId) {
-      const { error } = await db.from('tags').update({ name, type, color }).eq('id', tagId);
-      if (error) throw error;
-    } else {
-      const { error } = await db.from('tags').insert({ name, type, color });
-      if (error) throw error;
-    }
-    
+    const { data } = await db.from('mind_map_app_tags').insert({ name, type, color }).select().single();
+    allTags.push(data);
+    renderTags();
     closeTagModal();
-    showToast(tagId ? 'Tag updated!' : 'Tag created!', 'success');
-    await loadTags();
-    renderFilters();
-    renderTagsGrid();
-    renderTaskTagSelector();
-    updateQuickActions();
-  } catch (err) {
-    console.error(err);
-    showToast('Error saving tag', 'error');
+    showToast(`Tag "${name}" created`);
+    document.getElementById('fTagName').value = '';
+  } catch (e) {
+    showToast(`Error: ${e.message}`, 'error');
   }
 }
 
-function deleteTag(tagId) {
-  const tag = allTags.find(t => t.id === tagId);
-  document.getElementById('deleteMessage').textContent = `Delete tag "${tag?.name}"? It will be removed from all tasks.`;
-  document.getElementById('deleteModal').classList.add('active');
-  
-  deleteCallback = async () => {
-    const { error } = await db.from('tags').delete().eq('id', tagId);
-    if (error) { showToast('Error deleting tag', 'error'); return; }
-    showToast('Tag deleted!', 'success');
-    await loadTags();
-    await loadTaskTags();
-    renderFilters();
-    renderTagsGrid();
-    renderTree();
-    updateQuickActions();
-  };
+// ================================================================
+// SETTINGS MODAL
+// ================================================================
+function openSettingsModal() {
+  document.getElementById('settingsModal').classList.add('active');
+  document.getElementById('fSettingsName').value = chatMemory.user_name || '';
+  document.getElementById('fSettingsWake').value = chatMemory.wake_time || '6';
+  document.getElementById('fSettingsSleep').value = chatMemory.sleep_time || '23';
+  document.getElementById('fSettingsApiKey').value = anthropicApiKey;
 }
 
-function closeDeleteModal() {
-  document.getElementById('deleteModal').classList.remove('active');
-  deleteCallback = null;
-}
+function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
 
-function confirmDelete() {
-  if (deleteCallback) deleteCallback();
-  closeDeleteModal();
-}
-
-// ==================================================
-// QUICK CHAT
-// ==================================================
-function initChat() {
-  const container = document.getElementById('chatMessages');
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
+async function saveSettings() {
+  const name = document.getElementById('fSettingsName').value.trim();
+  const wake = document.getElementById('fSettingsWake').value;
+  const sleep = document.getElementById('fSettingsSleep').value;
+  const apiKey = document.getElementById('fSettingsApiKey').value.trim();
   
-  addChatMessage("👋 Hi! I can help you set focus. Try commands like:", true);
-  addChatMessage("• \"focus on AI\"\n• \"add Japanese to focus\"\n• \"clear focus\"\n• \"what's my focus?\"", true);
+  if (name) await setMemory('user_name', name);
+  await setMemory('wake_time', wake);
+  await setMemory('sleep_time', sleep);
   
-  updateQuickActions();
-}
-
-function updateQuickActions() {
-  const container = document.getElementById('quickActions');
-  const subjects = allTags.filter(t => t.type === 'subject');
-  
-  container.innerHTML = `
-    <span class="quick-action" onclick="processChatCommand('clear focus')">Clear Focus</span>
-    ${subjects.slice(0, 5).map(t => `
-      <span class="quick-action" onclick="processChatCommand('focus on ${t.name}')">${t.is_focused ? '⭐' : ''} ${t.name}</span>
-    `).join('')}
-  `;
-}
-
-function addChatMessage(text, isBot) {
-  const container = document.getElementById('chatMessages');
-  const msg = document.createElement('div');
-  msg.className = `chat-message ${isBot ? 'bot' : 'user'}`;
-  msg.innerHTML = text.replace(/\n/g, '<br>');
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
-}
-
-function sendChatMessage() {
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if (!text) return;
-  
-  addChatMessage(text, false);
-  input.value = '';
-  
-  processChatCommand(text);
-}
-
-async function processChatCommand(text) {
-  const lower = text.toLowerCase();
-  
-  // Clear focus
-  if (lower.includes('clear') && lower.includes('focus')) {
-    await clearAllFocus();
-    addChatMessage("✅ Focus cleared! Showing all tasks now.", true);
-    return;
-  }
-  
-  // What's my focus?
-  if (lower.includes('what') && lower.includes('focus')) {
-    const focused = allTags.filter(t => t.is_focused);
-    if (focused.length === 0) {
-      addChatMessage("You don't have any focus set. Try \"focus on AI\" or \"focus on Japanese\".", true);
-    } else {
-      addChatMessage(`Your current focus: ${focused.map(t => t.name).join(', ')}`, true);
-    }
-    return;
-  }
-  
-  // Focus on X / Add X to focus
-  const focusMatch = lower.match(/(?:focus on|add|set focus to)\s+(.+)/);
-  if (focusMatch) {
-    const tagName = focusMatch[1].trim();
-    const tag = allTags.find(t => t.name.toLowerCase() === tagName);
-    
-    if (tag) {
-      if (!tag.is_focused) {
-        await db.from('tags').update({ is_focused: true }).eq('id', tag.id);
-        await loadTags();
-        renderTagsGrid();
-        renderTree();
-        updateFocusBanner();
-        updateQuickActions();
-      }
-      const taskCount = allTasks.filter(t => getAllTagsForTask(t.id).some(tg => tg.id === tag.id)).length;
-      addChatMessage(`✅ Focused on "${tag.name}". Found ${taskCount} related task(s).`, true);
-    } else {
-      addChatMessage(`❓ I couldn't find a tag called "${tagName}". Available tags: ${allTags.filter(t => t.type === 'subject').map(t => t.name).join(', ')}`, true);
-    }
-    return;
-  }
-  
-  // Remove X from focus
-  const removeMatch = lower.match(/(?:remove|unfocus)\s+(.+)/);
-  if (removeMatch) {
-    const tagName = removeMatch[1].replace(/from focus/i, '').trim();
-    const tag = allTags.find(t => t.name.toLowerCase() === tagName);
-    
-    if (tag && tag.is_focused) {
-      await db.from('tags').update({ is_focused: false }).eq('id', tag.id);
-      await loadTags();
-      renderTagsGrid();
-      renderTree();
-      updateFocusBanner();
-      updateQuickActions();
-      addChatMessage(`✅ Removed "${tag.name}" from focus.`, true);
-    } else {
-      addChatMessage(`"${tagName}" is not in your focus.`, true);
-    }
-    return;
-  }
-  
-  // Default response
-  addChatMessage("🤔 I didn't understand. Try:\n• \"focus on AI\"\n• \"clear focus\"\n• \"what's my focus?\"", true);
-}
-
-// ==================================================
-// FIND TASK (Decision Tree)
-// ==================================================
-let findStep = 0;
-let findSelections = {};
-
-function initFindTask() {
-  const container = document.getElementById('findContainer');
-  container.innerHTML = `
-    <div id="findMessages" style="min-height: 200px;"></div>
-    <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="startFindTask()">🔍 Find a Task</button>
-  `;
-}
-
-function startFindTask() {
-  findStep = 0;
-  findSelections = {};
-  document.getElementById('findMessages').innerHTML = '';
-  addFindMessage("Let's find you a task! 🎯", true);
-  setTimeout(askFindQuestion, 500);
-}
-
-function addFindMessage(text, isBot) {
-  const container = document.getElementById('findMessages');
-  const msg = document.createElement('div');
-  msg.className = `chat-message ${isBot ? 'bot' : 'user'}`;
-  msg.innerHTML = text;
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
-}
-
-function addFindOptions(options, callback) {
-  const container = document.getElementById('findMessages');
-  const div = document.createElement('div');
-  div.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0;';
-  
-  options.forEach(opt => {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-sm btn-secondary';
-    btn.textContent = opt.label;
-    btn.onclick = () => {
-      addFindMessage(opt.label, false);
-      div.remove();
-      callback(opt.value);
-    };
-    div.appendChild(btn);
-  });
-  
-  container.appendChild(div);
-}
-
-function askFindQuestion() {
-  const questions = [
-    {
-      q: "How are you feeling?",
-      type: 'mood',
-      getOptions: () => {
-        const moods = allTags.filter(t => t.type === 'mood');
-        return [...moods.map(t => ({ label: t.name, value: t.id })), { label: 'Any mood', value: null }];
-      }
-    },
-    {
-      q: "Where are you?",
-      type: 'location',
-      getOptions: () => {
-        const locs = allTags.filter(t => t.type === 'location');
-        return [...locs.map(t => ({ label: t.name, value: t.id })), { label: 'Anywhere', value: null }];
-      }
-    },
-    {
-      q: "What subject?",
-      type: 'subject',
-      getOptions: () => {
-        const subs = allTags.filter(t => t.type === 'subject');
-        return [...subs.map(t => ({ label: t.name, value: t.id })), { label: 'Any subject', value: null }];
-      }
-    }
-  ];
-  
-  if (findStep >= questions.length) {
-    showFindResults();
-    return;
-  }
-  
-  const q = questions[findStep];
-  addFindMessage(q.q, true);
-  
-  setTimeout(() => {
-    addFindOptions(q.getOptions(), (value) => {
-      findSelections[q.type] = value;
-      findStep++;
-      setTimeout(askFindQuestion, 300);
-    });
-  }, 300);
-}
-
-function showFindResults() {
-  let filtered = allTasks.filter(t => {
-    // Only leaf tasks (no children)
-    const hasChildren = allTasks.some(c => c.parent_id === t.id);
-    return !hasChildren;
-  });
-  
-  // Filter by selections
-  Object.entries(findSelections).forEach(([type, tagId]) => {
-    if (tagId) {
-      filtered = filtered.filter(t => {
-        const tags = getAllTagsForTask(t.id);
-        
-        // Special mood handling (hierarchical)
-        if (type === 'mood') {
-          const filterTag = allTags.find(tg => tg.id === tagId);
-          const filterIdx = MOOD_HIERARCHY.indexOf(filterTag?.name);
-          const taskMoodTags = tags.filter(tg => tg.type === 'mood');
-          if (taskMoodTags.length === 0) return true;
-          return taskMoodTags.some(mt => {
-            const taskIdx = MOOD_HIERARCHY.indexOf(mt.name);
-            return taskIdx !== -1 && taskIdx <= filterIdx;
-          });
-        }
-        
-        return tags.some(tg => tg.id === tagId);
-      });
-    }
-  });
-  
-  if (filtered.length === 0) {
-    addFindMessage("😕 No tasks match your criteria. Try different options!", true);
+  if (apiKey) {
+    anthropicApiKey = apiKey;
+    localStorage.setItem('tb_api_key', apiKey);
   } else {
-    addFindMessage(`Found ${filtered.length} task(s):`, true);
-    
-    const container = document.getElementById('findMessages');
-    filtered.slice(0, 5).forEach(task => {
-      const path = getTaskPath(task.id);
-      const tags = getAllTagsForTask(task.id);
-      
-      const card = document.createElement('div');
-      card.className = 'task-result-card';
-      card.innerHTML = `
-        <h4>${escapeHtml(task.name)}</h4>
-        <div class="path">${path}</div>
-        <div class="tree-node-tags">
-          ${tags.slice(0, 5).map(t => `<span class="tag" style="background: ${t.color}20; color: ${t.color}">${t.name}</span>`).join('')}
-        </div>
-        ${task.links ? `<a href="${task.links}" target="_blank" style="color: #667eea; font-size: 0.85rem; display: block; margin-top: 8px;">🔗 Open Link</a>` : ''}
-      `;
-      container.appendChild(card);
-    });
+    anthropicApiKey = '';
+    localStorage.removeItem('tb_api_key');
   }
   
-  setTimeout(() => {
-    const container = document.getElementById('findMessages');
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-primary';
-    btn.style.cssText = 'width: 100%; margin-top: 15px;';
-    btn.textContent = '🔍 Search Again';
-    btn.onclick = startFindTask;
-    container.appendChild(btn);
-  }, 500);
+  closeSettingsModal();
+  showToast('Settings saved');
 }
 
+// ================================================================
+// NAVIGATION
+// ================================================================
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`panel-${name}`).classList.add('active');
+  event.target.closest('.nav-btn').classList.add('active');
+  
+  if (name === 'tree') renderTree();
+  if (name === 'habits') renderHabits();
+  if (name === 'tags') renderTags();
+}
+
+// ================================================================
+// UTILITIES
+// ================================================================
 function getTaskPath(taskId) {
   const parts = [];
-  let current = allTasks.find(t => t.id === taskId);
-  while (current) {
-    parts.unshift(current.name);
-    current = allTasks.find(t => t.id === current.parent_id);
-  }
+  let cur = allTasks.find(t => t.id === taskId);
+  while (cur) { parts.unshift(cur.name); cur = allTasks.find(t => t.id === cur.parent_id); }
   return parts.join(' → ');
 }
 
-// ==================================================
-// NAVIGATION
-// ==================================================
-function switchTab(tabName) {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById(`${tabName}-tab`).classList.add('active');
+function esc(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
 }
 
-// ==================================================
-// UTILITIES
-// ==================================================
 function showToast(msg, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
@@ -1712,21 +2256,10 @@ function showToast(msg, type = 'success') {
   setTimeout(() => toast.remove(), 3000);
 }
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
-}
-
-// ==================================================
+// ================================================================
 // START
-// ==================================================
+// ================================================================
 init();
 </script>
-
 </body>
 </html>

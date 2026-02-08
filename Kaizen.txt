@@ -1,3 +1,13 @@
+https://keep.google.com/u/1/#label/%23%20PANM
+
+Need these to get assigned
+
+
+
+I don't want to see the parent tasks as a dropdown. I just want to see them like available options to select. And once I select one. It will keep on showing me subtasks in the below row. Then sub-sub task. Until I stop it should keep on diplaying the subtasks. Once I move ahead. That is the level where task should get stored.
+
+
+
 Before going ahead lets confirm something. Also can you make some interface to add new tasks from the web app inside the database. Also I should be able to edit or delete the data inside database. Also can i assign the priority to the tasks and modify them by having a simple chat inside the app. So that I can chnage the priority of tasks on the go.
 
 
